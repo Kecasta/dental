@@ -21,14 +21,18 @@ except ImportError:
 
 class GeminiClinicAgent:
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or settings.GEMINI_API_KEY
+        raw_key = api_key or settings.GEMINI_API_KEY
+        self.api_key = raw_key.strip('"').strip("'").strip() if raw_key else None
         self.client = None
         if HAS_GENAI and self.api_key:
             try:
+                # Loggear los primeros caracteres para depuración segura
+                logger.info(f"Inicializando cliente Gemini con API Key que inicia en: {self.api_key[:8]}...")
                 self.client = genai.Client(api_key=self.api_key)
                 logger.info("Cliente de Google Gemini 2.5 Flash inicializado con éxito.")
             except Exception as e:
                 logger.warning(f"No se pudo inicializar el cliente Gemini: {e}")
+
 
     async def process_message(
         self,
