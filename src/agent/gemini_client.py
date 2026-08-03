@@ -61,20 +61,58 @@ class GeminiClinicAgent:
         history: List[Dict[str, str]],
         phone_number: str
     ) -> Dict[str, Any]:
-        """Ejecuta inferencia en Gemini 2.5/3.5 Flash utilizando Function Calling nativo."""
+        """Ejecuta inferencia en Gemini 2.5/3.5 Flash utilizando Function Calling manual por esquema."""
         from google.genai import types
 
         model_name = settings.GEMINI_MODEL or 'gemini-2.5-flash'
-        tools_list = [
-            tool_consultar_disponibilidad,
-            tool_agendar_cita,
-            tool_calificar_prospecto
-        ]
 
-        # Configurar la instrucción del sistema y las herramientas
+        # Declarar esquemas de las funciones (evita que el SDK intente ejecutarlas de forma asíncrona automática)
+        schema_consultar = types.FunctionDeclaration(
+            name="consultar_disponibilidad",
+            description="Consulta la disponibilidad de agenda para Smile Aesthetic & Dental Clinic.",
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    "fecha": types.Schema(type=types.Type.STRING, description="Fecha YYYY-MM-DD (ej: 2026-08-10)"),
+                    "hora": types.Schema(type=types.Type.STRING, description="Hora HH:MM (ej: 10:00)")
+                },
+                required=["fecha", "hora"]
+            )
+        )
+
+        schema_agendar = types.FunctionDeclaration(
+            name="agendar_cita",
+            description="Reserva y confirma una cita médica/estética en Smile Aesthetic & Dental Clinic.",
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    "nombre": types.Schema(type=types.Type.STRING, description="Nombre completo del paciente"),
+                    "servicio": types.Schema(type=types.Type.STRING, description="Servicio (ej: 'Valoración Odontológica', 'Blanqueamiento Dental LED', 'Diseño de Sonrisa & Carillas', 'Armonización Facial & Ácido Hialurónico', 'Ortodoncia Invisible (Alineadores)')"),
+                    "fecha": types.Schema(type=types.Type.STRING, description="Fecha YYYY-MM-DD"),
+                    "hora": types.Schema(type=types.Type.STRING, description="Hora HH:MM")
+                },
+                required=["nombre", "servicio", "fecha", "hora"]
+            )
+        )
+
+        schema_calificar = types.FunctionDeclaration(
+            name="calificar_prospecto",
+            description="Registra la calificación de scoring del lead o prospecto en el CRM.",
+            parameters=types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    "score": types.Schema(type=types.Type.STRING, description="Puntaje de scoring ('VIP', 'Alto', 'Medio', 'Bajo')"),
+                    "servicio": types.Schema(type=types.Type.STRING, description="Servicio principal de interés"),
+                    "notes": types.Schema(type=types.Type.STRING, description="Comentarios y notas sobre el lead")
+                },
+                required=["score", "servicio", "notes"]
+            )
+        )
+
+        # Configurar la instrucción del sistema y las herramientas por esquema
         config = types.GenerateContentConfig(
             system_instruction=CLINIC_SYSTEM_PROMPT,
-            tools=tools_list,
+            tools=[types.Tool(function_declarations=[schema_consultar, schema_agendar, schema_calificar])],
             temperature=0.7,
         )
 
@@ -106,7 +144,7 @@ class GeminiClinicAgent:
 
         tools_called = []
         
-        # Bucle para resolver las llamadas de herramientas (Function Calling loop)
+        # Bucle para resolver las llamadas de herramientas (Function Calling loop manual)
         while response.function_calls:
             tool_responses = []
             model_parts = []
@@ -136,9 +174,9 @@ class GeminiClinicAgent:
                     elif name == "calificar_prospecto":
                         result = await tool_calificar_prospecto(
                             telefono=phone_number,
-                            score=args.get("score"),
+                            puntaje=args.get("score"),  # notar el cambio a 'puntaje' para concordar con tools.py
                             servicio=args.get("servicio"),
-                            notes=args.get("notes")
+                            notas=args.get("notes")      # notar el cambio a 'notas' para concordar con tools.py
                         )
                 except Exception as tool_err:
                     logger.error(f"Error ejecutando herramienta {name}: {tool_err}")
@@ -170,6 +208,7 @@ class GeminiClinicAgent:
                 contents=contents,
                 config=config
             )
+
 
         reply_text = response.text if response and response.text else "Cita registrada con éxito. ¿Tienes alguna otra duda?"
 
