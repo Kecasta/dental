@@ -61,101 +61,123 @@ class GeminiClinicAgent:
         history: List[Dict[str, str]],
         phone_number: str
     ) -> Dict[str, Any]:
-        """Ejecuta inferencia en Gemini 2.5/3.5 Flash utilizando Function Calling manual por esquema."""
-        from google.genai import types
+        """Ejecuta inferencia directa por REST API en Gemini para evitar problemas de firmas de google-auth."""
+        import httpx
 
         model_name = settings.GEMINI_MODEL or 'gemini-2.5-flash'
 
-        # Declarar esquemas de las funciones (evita que el SDK intente ejecutarlas de forma asíncrona automática)
-        schema_consultar = types.FunctionDeclaration(
-            name="consultar_disponibilidad",
-            description="Consulta la disponibilidad de agenda para Smile Aesthetic & Dental Clinic.",
-            parameters=types.Schema(
-                type=types.Type.OBJECT,
-                properties={
-                    "fecha": types.Schema(type=types.Type.STRING, description="Fecha YYYY-MM-DD (ej: 2026-08-10)"),
-                    "hora": types.Schema(type=types.Type.STRING, description="Hora HH:MM (ej: 10:00)")
-                },
-                required=["fecha", "hora"]
-            )
-        )
-
-        schema_agendar = types.FunctionDeclaration(
-            name="agendar_cita",
-            description="Reserva y confirma una cita médica/estética en Smile Aesthetic & Dental Clinic.",
-            parameters=types.Schema(
-                type=types.Type.OBJECT,
-                properties={
-                    "nombre": types.Schema(type=types.Type.STRING, description="Nombre completo del paciente"),
-                    "servicio": types.Schema(type=types.Type.STRING, description="Servicio (ej: 'Valoración Odontológica', 'Blanqueamiento Dental LED', 'Diseño de Sonrisa & Carillas', 'Armonización Facial & Ácido Hialurónico', 'Ortodoncia Invisible (Alineadores)')"),
-                    "fecha": types.Schema(type=types.Type.STRING, description="Fecha YYYY-MM-DD"),
-                    "hora": types.Schema(type=types.Type.STRING, description="Hora HH:MM")
-                },
-                required=["nombre", "servicio", "fecha", "hora"]
-            )
-        )
-
-        schema_calificar = types.FunctionDeclaration(
-            name="calificar_prospecto",
-            description="Registra la calificación de scoring del lead o prospecto en el CRM.",
-            parameters=types.Schema(
-                type=types.Type.OBJECT,
-                properties={
-                    "score": types.Schema(type=types.Type.STRING, description="Puntaje de scoring ('VIP', 'Alto', 'Medio', 'Bajo')"),
-                    "servicio": types.Schema(type=types.Type.STRING, description="Servicio principal de interés"),
-                    "notes": types.Schema(type=types.Type.STRING, description="Comentarios y notas sobre el lead")
-                },
-                required=["score", "servicio", "notes"]
-            )
-        )
-
-        # Configurar la instrucción del sistema y las herramientas por esquema
-        config = types.GenerateContentConfig(
-            system_instruction=CLINIC_SYSTEM_PROMPT,
-            tools=[types.Tool(function_declarations=[schema_consultar, schema_agendar, schema_calificar])],
-            temperature=0.7,
-        )
-
-        # Construir el historial estructurado de la conversación
-        contents = []
+        # Preparar los mensajes del historial en formato REST de Gemini
+        contents_payload = []
         for h in history[-10:]:
             role = "user" if h["sender"] == "user" else "model"
-            contents.append(
-                types.Content(
-                    role=role,
-                    parts=[types.Part.from_text(text=h["content"])]
-                )
-            )
+            contents_payload.append({
+                "role": role,
+                "parts": [{"text": h["content"]}]
+            })
         
-        # Añadir el último mensaje del usuario
-        contents.append(
-            types.Content(
-                role="user",
-                parts=[types.Part.from_text(text=user_message)]
-            )
-        )
+        # Añadir el mensaje actual
+        contents_payload.append({
+            "role": "user",
+            "parts": [{"text": user_message}]
+        })
 
-        # Primera llamada al modelo
-        response = self.client.models.generate_content(
-            model=model_name,
-            contents=contents,
-            config=config
-        )
+        # Declarar herramientas en formato JSON de la API REST
+        tools_payload = [
+            {
+                "functionDeclarations": [
+                    {
+                        "name": "consultar_disponibilidad",
+                        "description": "Consulta la disponibilidad de agenda para Smile Aesthetic & Dental Clinic.",
+                        "parameters": {
+                            "type": "OBJECT",
+                            "properties": {
+                                "fecha": {"type": "STRING", "description": "Fecha YYYY-MM-DD (ej: 2026-08-10)"},
+                                "hora": {"type": "STRING", "description": "Hora HH:MM (ej: 10:00)"}
+                            },
+                            "required": ["fecha", "hora"]
+                        }
+                    },
+                    {
+                        "name": "agendar_cita",
+                        "description": "Reserva y confirma una cita médica/estética en Smile Aesthetic & Dental Clinic.",
+                        "parameters": {
+                            "type": "OBJECT",
+                            "properties": {
+                                "nombre": {"type": "STRING", "description": "Nombre completo del paciente"},
+                                "servicio": {"type": "STRING", "description": "Servicio deseado"},
+                                "fecha": {"type": "STRING", "description": "Fecha YYYY-MM-DD"},
+                                "hora": {"type": "STRING", "description": "Hora HH:MM"}
+                            },
+                            "required": ["nombre", "servicio", "fecha", "hora"]
+                        }
+                    },
+                    {
+                        "name": "calificar_prospecto",
+                        "description": "Registra la calificación de scoring del lead o prospecto en el CRM.",
+                        "parameters": {
+                            "type": "OBJECT",
+                            "properties": {
+                                "score": {"type": "STRING", "description": "Puntaje de scoring ('VIP', 'Alto', 'Medio', 'Bajo')"},
+                                "servicio": {"type": "STRING", "description": "Servicio principal de interés"},
+                                "notes": {"type": "STRING", "description": "Comentarios y notas sobre el lead"}
+                            },
+                            "required": ["score", "servicio", "notes"]
+                        }
+                    }
+                ]
+            }
+        ]
 
+        # Payload completo de la API REST
+        payload = {
+            "contents": contents_payload,
+            "systemInstruction": {
+                "parts": [{"text": CLINIC_SYSTEM_PROMPT}]
+            },
+            "tools": tools_payload,
+            "generationConfig": {
+                "temperature": 0.7
+            }
+        }
+
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
         tools_called = []
-        
-        # Bucle para resolver las llamadas de herramientas (Function Calling loop manual)
-        while response.function_calls:
-            tool_responses = []
-            model_parts = []
-            
-            for function_call in response.function_calls:
-                name = function_call.name
-                args = function_call.args
-                logger.info(f"Gemini solicitó ejecutar la herramienta: '{name}' con argumentos: {args}")
+        reply_text = ""
+
+        # Bucle manual para resolver las llamadas de herramientas por API REST
+        while True:
+            async with httpx.AsyncClient(timeout=30.0) as http_client:
+                res = await http_client.post(url, json=payload)
+                if res.status_code != 200:
+                    raise Exception(f"HTTP {res.status_code}: {res.text}")
+                data = res.json()
+
+            candidates = data.get("candidates", [])
+            if not candidates:
+                break
+
+            candidate = candidates[0]
+            parts = candidate.get("content", {}).get("parts", [])
+
+            # Filtrar si el modelo solicitó llamadas a herramientas
+            function_calls = [p.get("functionCall") for p in parts if "functionCall" in p]
+
+            if not function_calls:
+                # No hay llamadas a funciones: extraer texto final de respuesta
+                text_parts = [p.get("text") for p in parts if "text" in p]
+                reply_text = "".join(text_parts) if text_parts else ""
+                break
+
+            # Procesar las herramientas solicitadas por el modelo
+            model_parts_payload = []
+            tool_responses_payload = []
+
+            for function_call in function_calls:
+                name = function_call.get("name")
+                args = function_call.get("args", {})
+                logger.info(f"Gemini (REST API) solicitó ejecutar: '{name}' con argumentos: {args}")
                 tools_called.append(name)
-                
-                # Ejecutar la herramienta correspondiente
+
                 result = None
                 try:
                     if name == "consultar_disponibilidad":
@@ -174,47 +196,41 @@ class GeminiClinicAgent:
                     elif name == "calificar_prospecto":
                         result = await tool_calificar_prospecto(
                             telefono=phone_number,
-                            puntaje=args.get("score"),  # notar el cambio a 'puntaje' para concordar con tools.py
+                            puntaje=args.get("score"),
                             servicio=args.get("servicio"),
-                            notas=args.get("notes")      # notar el cambio a 'notas' para concordar con tools.py
+                            notas=args.get("notes")
                         )
                 except Exception as tool_err:
                     logger.error(f"Error ejecutando herramienta {name}: {tool_err}")
                     result = {"error": str(tool_err)}
 
-                # Añadir la respuesta de la herramienta
-                tool_responses.append(
-                    types.Part.from_function_response(
-                        name=name,
-                        response={"result": result}
-                    )
-                )
-                
-                # Guardar la llamada hecha por el modelo
-                model_parts.append(
-                    types.Part.from_function_call(
-                        name=name,
-                        args=args
-                    )
-                )
-            
-            # Añadir las llamadas del modelo y sus respuestas al historial de contents
-            contents.append(types.Content(role="model", parts=model_parts))
-            contents.append(types.Content(role="user", parts=tool_responses))
-            
-            # Re-invocar a Gemini con los resultados de las herramientas
-            response = self.client.models.generate_content(
-                model=model_name,
-                contents=contents,
-                config=config
-            )
+                # Guardar la llamada del modelo y la respuesta de la herramienta
+                model_parts_payload.append({
+                    "functionCall": function_call
+                })
+                tool_responses_payload.append({
+                    "functionResponse": {
+                        "name": name,
+                        "response": {"result": result}
+                    }
+                })
 
+            # Añadir ambos turnos al historial del payload para la siguiente iteración
+            payload["contents"].append({
+                "role": "model",
+                "parts": model_parts_payload
+            })
+            payload["contents"].append({
+                "role": "user",
+                "parts": tool_responses_payload
+            })
 
-        reply_text = response.text if response and response.text else "Cita registrada con éxito. ¿Tienes alguna otra duda?"
+        if not reply_text:
+            reply_text = "Cita registrada con éxito. ¿Tienes alguna otra duda?"
 
         # Determinar intención
         intent = "consulta"
-        if "agendamiento_exitoso" in tools_called or "agendar_cita" in tools_called:
+        if "agendar_cita" in tools_called:
             intent = "agendamiento"
 
         return {
@@ -223,6 +239,7 @@ class GeminiClinicAgent:
             "used_model": model_name,
             "tools_called": tools_called
         }
+
 
 
 
