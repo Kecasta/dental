@@ -110,11 +110,18 @@ class GeminiClinicAgent:
                 "tools_called": []
             }
 
-        # 2. Solicitud de Cita / Agendamiento
-        if any(w in msg_lower for w in ["cita", "agendar", "reservar", "diseño", "armonización", "mañana", "lunes"]):
+        # 2. Solicitud de Cita, Disponibilidad o Tratamientos Específicos
+        booking_keywords = [
+            "cita", "agendar", "reservar", "diseño", "armonización", "mañana", "lunes", 
+            "valoracion", "valoración", "blanqueamiento", "ortodoncia", "limpieza", 
+            "disponibilidad", "disponible", "horario", "horarios", "cupo", "cupos", "agenda"
+        ]
+        if any(w in msg_lower for w in booking_keywords):
             # Identificar servicio
-            service_detected = "Diseño de Sonrisa & Carillas"
-            if "armonización" in msg_lower or "ácido" in msg_lower or "facial" in msg_lower:
+            service_detected = "Valoración Odontológica"
+            if "diseño" in msg_lower or "carillas" in msg_lower:
+                service_detected = "Diseño de Sonrisa & Carillas"
+            elif "armonización" in msg_lower or "ácido" in msg_lower or "facial" in msg_lower:
                 service_detected = "Armonización Facial & Ácido Hialurónico"
             elif "ortodoncia" in msg_lower or "alineador" in msg_lower:
                 service_detected = "Ortodoncia Invisible (Alineadores)"
@@ -137,12 +144,12 @@ class GeminiClinicAgent:
                 )
                 return {
                     "response_text": (
-                        f"¡Excelente elección! 🎉 He apartado tu cita para **{service_detected}** con la Dra. Valentina Ríos.\n\n"
+                        f"¡Con gusto! He agendado una cita de **{service_detected}** con la Dra. Valentina Ríos.\n\n"
                         f"📅 **Fecha:** {tomorrow_str}\n"
                         f"⏰ **Hora:** 10:00 AM\n"
                         f"📍 **Ubicación:** Smile Clinic - Sede Principal Calle 93 # 14-20\n\n"
-                        f"{'💳 *Nota:* Este procedimiento VIP requiere abono de reserva. ' if book_res.get('requiere_abono') else ''}"
-                        "¿Confirmamos tus datos?"
+                        f"{'💳 *Nota:* Este procedimiento requiere abono de reserva. ' if book_res.get('requiere_abono') else ''}"
+                        "¿Te queda bien este horario para confirmar tus datos?"
                     ),
                     "intent": "agendamiento_exitoso",
                     "used_model": "heuristic_fallback",
@@ -152,11 +159,10 @@ class GeminiClinicAgent:
                 sug = check_res.get("horarios_sugeridos", ["11:15 AM", "03:00 PM"])
                 return {
                     "response_text": (
-                        f"Para {service_detected}, el horario solicitado está ocupado. "
-                        f"Tengo estos 3 horarios disponibles para ti:\n\n"
+                        f"Para {service_detected}, el horario solicitado está ocupado, pero tengo estos 3 horarios disponibles para mañana:\n\n"
                         f"1️⃣ {sug[0]} (Mañana)\n"
                         f"2️⃣ {sug[1] if len(sug)>1 else '02:30 PM'} (Tarde)\n\n"
-                        "¿Cuál se ajusta mejor a tu agenda?"
+                        "¿Cuál de estos horarios te queda mejor?"
                     ),
                     "intent": "reagendamiento_opciones",
                     "used_model": "heuristic_fallback",
@@ -164,7 +170,7 @@ class GeminiClinicAgent:
                 }
 
         # 3. Precios y Tarifas
-        if any(w in msg_lower for w in ["precio", "cuanto cuesta", "valor", "costo", "tarifa"]):
+        if any(w in msg_lower for w in ["precio", "cuanto cuesta", "costo", "tarifa", "valores", "cuánto cuesta"]):
             return {
                 "response_text": (
                     "Con gusto te comparto nuestras tarifas preferenciales 📋:\n\n"
@@ -183,10 +189,12 @@ class GeminiClinicAgent:
         # Respuesta General
         return {
             "response_text": (
-                "Entendido. En **Smile Aesthetic & Dental Clinic** estamos listos para atenderte. "
-                "¿Te gustaría agendar una valoración presencial o consultar disponibilidad de agenda?"
+                "Entendido. En **Smile Aesthetic & Dental Clinic** ofrecemos Diseño de Sonrisa, "
+                "Ortodoncia Invisible, Armonización Facial y Blanqueamiento Dental.\n\n"
+                "¿Te gustaría agendar una valoración mañana o conocer los precios de algún tratamiento?"
             ),
             "intent": "general",
             "used_model": "heuristic_fallback",
             "tools_called": []
         }
+
