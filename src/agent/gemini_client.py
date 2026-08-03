@@ -154,6 +154,7 @@ class GeminiClinicAgent:
                     else:
                         raise Exception(f"Status {res.status_code}: {res.text}")
             except Exception as e1:
+                logger.warning(f"Intento 1 (x-goog-api-key) falló con: {e1}")
                 last_err = e1
                 res = None
 
@@ -169,6 +170,7 @@ class GeminiClinicAgent:
                         else:
                             raise Exception(f"Status {res.status_code}: {res.text}")
                 except Exception as e2:
+                    logger.warning(f"Intento 2 (Authorization Bearer) falló con: {e2}")
                     last_err = e2
                     res = None
 
@@ -183,8 +185,10 @@ class GeminiClinicAgent:
                         else:
                             raise Exception(f"Status {res.status_code}: {res.text}")
                 except Exception as e3:
+                    logger.warning(f"Intento 3 (?key=) falló con: {e3}")
                     last_err = e3
                     res = None
+
 
             # Si todos los métodos fallaron, levantar la excepción
             if res is None:
