@@ -90,7 +90,99 @@ async def handle_chat_api(payload: ChatRequest):
             content={"status": "error", "response_text": "Ha ocurrido un error procesando tu solicitud."}
         )
 
+# --- ENDPOINTS ADMINISTRATIVOS (WEB CRM) ---
+
+@app.get("/admin-crm")
+async def get_admin_dashboard():
+    """Servir panel de control oculto del administrador."""
+    admin_path = os.path.join(web_dir, "admin.html")
+    return FileResponse(admin_path)
+
+@app.get("/api/admin/stats")
+async def get_admin_stats():
+    """Obtiene KPIs de citas, leads y leads VIP."""
+    try:
+        async for session in get_db_session():
+            repo = ClinicRepository(session)
+            leads = await repo.get_all_leads()
+            appointments = await repo.get_all_appointments()
+            
+            total_leads = len(leads)
+            total_appointments = len(appointments)
+            total_vip = sum(1 for l in leads if l.qualification_score == 'VIP')
+            
+            return {
+                "total_leads": total_leads,
+                "total_appointments": total_appointments,
+                "total_vip": total_vip
+            }
+    except Exception as e:
+        logger.error(f"Error al obtener estadísticas del CRM: {e}")
+        return {"total_leads": 0, "total_appointments": 0, "total_vip": 0}
+
+@app.get("/api/admin/leads")
+async def get_admin_leads():
+    """Obtiene el listado completo de prospectos (leads) del CRM."""
+    try:
+        async for session in get_db_session():
+            repo = ClinicRepository(session)
+            leads = await repo.get_all_leads()
+            return [
+                {
+                    "full_name": l.full_name,
+                    "phone_number": l.phone_number,
+                    "qualification_score": l.qualification_score,
+                    "service_interest": l.service_interest,
+                    "notes": l.notes
+                }
+                for l in leads
+            ]
+    except Exception as e:
+        logger.error(f"Error al obtener leads: {e}")
+        return []
+
+@app.get("/api/admin/appointments")
+async def get_admin_appointments():
+    """Obtiene el listado de citas confirmadas."""
+    try:
+        async for session in get_db_session():
+            repo = ClinicRepository(session)
+            appointments = await repo.get_all_appointments()
+            return [
+                {
+                    "patient_name": a.patient_name,
+                    "service_name": a.service_name,
+                    "appointment_date": a.appointment_date,
+                    "appointment_time": a.appointment_time,
+                    "specialist": a.specialist
+                }
+                for a in appointments
+            ]
+    except Exception as e:
+        logger.error(f"Error al obtener citas: {e}")
+        return []
+
+@app.get("/api/admin/history/{phone_number}")
+async def get_admin_chat_history(phone_number: str):
+    """Obtiene el historial de conversación completo de un paciente."""
+    try:
+        async for session in get_db_session():
+            repo = ClinicRepository(session)
+            history = await repo.get_conversation_history(phone_number, limit=50)
+            return [
+                {
+                    "sender": m.sender,
+                    "content": m.content,
+                    "timestamp": m.timestamp.strftime("%Y-%m-%d %H:%M:%S") if m.timestamp else ""
+                }
+                for m in history
+            ]
+    except Exception as e:
+        logger.error(f"Error al obtener historial de chat: {e}")
+        return []
+
 web_dir = os.path.join(os.path.dirname(__file__), "web")
+
 
 @app.get("/")
 async def root_landing():
