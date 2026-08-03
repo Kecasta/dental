@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     SMTP_USER: str = ""
     SMTP_PASSWORD: str = ""
     ADMIN_EMAIL: str = "admin@smileclinic.com"
+    ADMIN_PASSWORD: str = "SmileClinic2026!"
 
     DATABASE_URL: str = "sqlite+aiosqlite:///./data/smile_clinic.db"
 

@@ -39,6 +39,130 @@
                 radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.15) 0px, transparent 50%);
         }
 
+        /* LOGIN SCREEN */
+        #login-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-grow: 1;
+            padding: 20px;
+        }
+
+        .login-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 40px;
+            width: 100%;
+            max-width: 450px;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-card h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 26px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .login-card p {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            text-align: left;
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-group input {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: white;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.3s ease;
+        }
+
+        .input-group input:focus {
+            border-color: var(--primary);
+        }
+
+        .captcha-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            font-size: 18px;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .login-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 8px;
+            font-weight: 700;
+            width: 100%;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            font-family: inherit;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 10px;
+        }
+
+        .login-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        .error-msg {
+            color: #ef4444;
+            font-size: 13px;
+            margin-top: 15px;
+            font-weight: 600;
+            display: none;
+        }
+
+        /* CRM DASHBOARD SCREEN */
+        #dashboard-container {
+            display: none;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+
         header {
             display: flex;
             justify-content: space-between;
@@ -77,7 +201,13 @@
             letter-spacing: 1px;
         }
 
-        .refresh-btn {
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .refresh-btn, .logout-btn {
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--border-color);
             color: var(--text-color);
@@ -94,6 +224,11 @@
         .refresh-btn:hover {
             background: var(--primary);
             border-color: var(--primary);
+        }
+
+        .logout-btn:hover {
+            background: #ef4444;
+            border-color: #ef4444;
         }
 
         main {
@@ -348,98 +483,132 @@
 </head>
 <body>
 
-    <header>
-        <div class="logo-section">
-            <span class="material-symbols-outlined logo-icon">dentistry</span>
-            <div class="logo-text">
-                <h1>Smile Aesthetic</h1>
-                <p>CRM Admin & Leads Dashboard</p>
-            </div>
+    <!-- 1. PANTALLA DE ACCESO (LOGIN) -->
+    <div id="login-container">
+        <div class="login-card">
+            <span class="material-symbols-outlined" style="color: var(--primary); font-size: 48px; margin-bottom: 15px;">admin_panel_settings</span>
+            <h2>Panel Administrativo</h2>
+            <p>Smile Aesthetic & Dental Clinic</p>
+            
+            <form id="login-form" onsubmit="handleLogin(event)">
+                <div class="input-group">
+                    <label for="password">Contraseña Secreta</label>
+                    <input type="password" id="password" required placeholder="••••••••">
+                </div>
+                
+                <div class="input-group">
+                    <label>Verificación de Seguridad</label>
+                    <div id="captcha-box" class="captcha-box">Cargando...</div>
+                    <input type="number" id="captcha-answer" required placeholder="Escribe el resultado">
+                </div>
+                
+                <button type="submit" class="login-btn">Acceder al CRM</button>
+                <div id="login-error" class="error-msg"></div>
+            </form>
         </div>
-        <button class="refresh-btn" onclick="fetchData()">
-            <span class="material-symbols-outlined">refresh</span>
-            Recargar Datos
-        </button>
-    </header>
+    </div>
 
-    <main>
-        <!-- STATS -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-info">
-                    <h3>Total Citas</h3>
-                    <p id="stat-appointments">0</p>
+    <!-- 2. PANTALLA DE DASHBOARD (CRM) -->
+    <div id="dashboard-container">
+        <header>
+            <div class="logo-section">
+                <span class="material-symbols-outlined logo-icon">dentistry</span>
+                <div class="logo-text">
+                    <h1>Smile Aesthetic</h1>
+                    <p>CRM Admin & Leads Dashboard</p>
                 </div>
-                <span class="material-symbols-outlined stat-icon">calendar_month</span>
             </div>
-            <div class="stat-card">
-                <div class="stat-info">
-                    <h3>Leads Registrados</h3>
-                    <p id="stat-leads">0</p>
-                </div>
-                <span class="material-symbols-outlined stat-icon">group</span>
+            <div class="header-actions">
+                <button class="refresh-btn" onclick="fetchData()">
+                    <span class="material-symbols-outlined">refresh</span>
+                    Recargar Datos
+                </button>
+                <button class="logout-btn" onclick="handleLogout()">
+                    <span class="material-symbols-outlined">logout</span>
+                    Salir
+                </button>
             </div>
-            <div class="stat-card">
-                <div class="stat-info">
-                    <h3>Leads VIP</h3>
-                    <p id="stat-vip">0</p>
-                </div>
-                <span class="material-symbols-outlined stat-icon" style="color: var(--vip-color);">star</span>
-            </div>
-        </div>
+        </header>
 
-        <div class="crm-container">
-            <!-- LEADS CRM TABLE -->
-            <div class="panel-card">
-                <h2 class="section-title">
-                    <span class="material-symbols-outlined">contact_emergency</span>
-                    CRM - Embudo de Leads
-                </h2>
-                <div class="table-responsive">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Paciente</th>
-                                <th>Teléfono</th>
-                                <th>Servicio</th>
-                                <th>Scoring</th>
-                                <th>Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody id="leads-table-body">
-                            <tr>
-                                <td colspan="5" style="text-align: center; color: var(--text-muted);">Cargando leads...</td>
-                            </tr>
-                        </tbody>
-                    </table>
+        <main>
+            <!-- STATS -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Total Citas</h3>
+                        <p id="stat-appointments">0</p>
+                    </div>
+                    <span class="material-symbols-outlined stat-icon">calendar_month</span>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Leads Registrados</h3>
+                        <p id="stat-leads">0</p>
+                    </div>
+                    <span class="material-symbols-outlined stat-icon">group</span>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Leads VIP</h3>
+                        <p id="stat-vip">0</p>
+                    </div>
+                    <span class="material-symbols-outlined stat-icon" style="color: var(--vip-color);">star</span>
                 </div>
             </div>
 
-            <!-- APPOINTMENTS LIST -->
-            <div class="panel-card">
-                <h2 class="section-title">
-                    <span class="material-symbols-outlined">calendar_today</span>
-                    Próximas Citas Agendadas
-                </h2>
-                <div class="table-responsive">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Paciente</th>
-                                <th>Tratamiento</th>
-                                <th>Fecha & Hora</th>
-                            </tr>
-                        </thead>
-                        <tbody id="appointments-table-body">
-                            <tr>
-                                <td colspan="3" style="text-align: center; color: var(--text-muted);">Cargando citas...</td>
-                            </tr>
-                        </tbody>
-                    </table>
+            <div class="crm-container">
+                <!-- LEADS CRM TABLE -->
+                <div class="panel-card">
+                    <h2 class="section-title">
+                        <span class="material-symbols-outlined">contact_emergency</span>
+                        CRM - Embudo de Leads
+                    </h2>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Paciente</th>
+                                    <th>Teléfono</th>
+                                    <th>Servicio</th>
+                                    <th>Scoring</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="leads-table-body">
+                                <tr>
+                                    <td colspan="5" style="text-align: center; color: var(--text-muted);">No hay leads.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- APPOINTMENTS LIST -->
+                <div class="panel-card">
+                    <h2 class="section-title">
+                        <span class="material-symbols-outlined">calendar_today</span>
+                        Próximas Citas Agendadas
+                    </h2>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Paciente</th>
+                                    <th>Tratamiento</th>
+                                    <th>Fecha & Hora</th>
+                                </tr>
+                            </thead>
+                            <tbody id="appointments-table-body">
+                                <tr>
+                                    <td colspan="3" style="text-align: center; color: var(--text-muted);">No hay citas registradas.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-        </div>
-    </main>
+        </main>
+    </div>
 
     <!-- CONVERSATION MODAL -->
     <div id="chat-modal" class="modal" onclick="closeModal(event)">
@@ -456,18 +625,95 @@
 
     <script>
         const API_BASE = window.location.origin;
+        let captchaToken = '';
 
-        async function fetchData() {
+        // Cargar CAPTCHA inicial
+        async function loadCaptcha() {
             try {
+                const res = await fetch(`${API_BASE}/api/admin/captcha`);
+                const data = await res.json();
+                captchaToken = data.captcha_token;
+                document.getElementById('captcha-box').innerText = data.question;
+            } catch (err) {
+                console.error(err);
+                document.getElementById('captcha-box').innerText = "Error cargando CAPTCHA";
+            }
+        }
+
+        // Manejar Login
+        async function handleLogin(e) {
+            e.preventDefault();
+            const password = document.getElementById('password').value;
+            const answer = parseInt(document.getElementById('captcha-answer').value);
+            const errorEl = document.getElementById('login-error');
+            errorEl.style.display = 'none';
+
+            try {
+                const res = await fetch(`${API_BASE}/api/admin/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        password: password,
+                        captcha_answer: answer,
+                        captcha_token: captchaToken
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.status === 200 && data.session_token) {
+                    localStorage.setItem('admin_token', data.session_token);
+                    showDashboard();
+                } else {
+                    errorEl.innerText = data.response_text || "Error en credenciales.";
+                    errorEl.style.display = 'block';
+                    loadCaptcha(); // recargar captcha tras error
+                    document.getElementById('captcha-answer').value = '';
+                }
+            } catch (err) {
+                errorEl.innerText = "Error conectando con el servidor.";
+                errorEl.style.display = 'block';
+            }
+        }
+
+        // Cerrar sesión
+        function handleLogout() {
+            localStorage.removeItem('admin_token');
+            document.getElementById('dashboard-container').style.display = 'none';
+            document.getElementById('login-container').style.display = 'flex';
+            document.getElementById('password').value = '';
+            document.getElementById('captcha-answer').value = '';
+            loadCaptcha();
+        }
+
+        // Mostrar el dashboard si la sesión es válida
+        function showDashboard() {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('dashboard-container').style.display = 'flex';
+            fetchData();
+        }
+
+        // Obtener datos del CRM con autenticación por Header
+        async function fetchData() {
+            const token = localStorage.getItem('admin_token');
+            if (!token) {
+                handleLogout();
+                return;
+            }
+
+            try {
+                const headers = { 'X-Admin-Token': token };
+
                 // Fetch stats
-                const statsRes = await fetch(`${API_BASE}/api/admin/stats`);
+                const statsRes = await fetch(`${API_BASE}/api/admin/stats`, { headers });
+                if (statsRes.status === 401) { handleLogout(); return; }
                 const stats = await statsRes.json();
                 document.getElementById('stat-appointments').innerText = stats.total_appointments;
                 document.getElementById('stat-leads').innerText = stats.total_leads;
                 document.getElementById('stat-vip').innerText = stats.total_vip;
 
                 // Fetch leads
-                const leadsRes = await fetch(`${API_BASE}/api/admin/leads`);
+                const leadsRes = await fetch(`${API_BASE}/api/admin/leads`, { headers });
                 const leads = await leadsRes.json();
                 const leadsTbody = document.getElementById('leads-table-body');
                 leadsTbody.innerHTML = '';
@@ -495,7 +741,7 @@
                 }
 
                 // Fetch appointments
-                const appRes = await fetch(`${API_BASE}/api/admin/appointments`);
+                const appRes = await fetch(`${API_BASE}/api/admin/appointments`, { headers });
                 const appointments = await appRes.json();
                 const appTbody = document.getElementById('appointments-table-body');
                 appTbody.innerHTML = '';
@@ -520,13 +766,16 @@
         }
 
         async function openChatHistory(phone, name) {
+            const token = localStorage.getItem('admin_token');
             document.getElementById('modal-title').innerText = `Chat con ${name}`;
             const chatBody = document.getElementById('modal-chat-body');
             chatBody.innerHTML = '<p style="text-align:center; color:var(--text-muted);">Cargando conversación...</p>';
             document.getElementById('chat-modal').style.display = 'flex';
 
             try {
-                const res = await fetch(`${API_BASE}/api/admin/history/${phone}`);
+                const res = await fetch(`${API_BASE}/api/admin/history/${phone}`, {
+                    headers: { 'X-Admin-Token': token }
+                });
                 const history = await res.json();
                 chatBody.innerHTML = '';
 
@@ -555,8 +804,13 @@
             }
         }
 
-        // Carga inicial
-        fetchData();
+        // Carga inicial y auto-reconocimiento de sesión
+        if (localStorage.getItem('admin_token')) {
+            showDashboard();
+        } else {
+            loadCaptcha();
+        }
+
         // Recarga automática cada 30 segundos
         setInterval(fetchData, 30000);
     </script>

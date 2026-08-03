@@ -1,12 +1,15 @@
 import os
 import sys
-import asyncio
+import uuid
+import random
+import datetime
+from typing import Dict, Any, Set
 from contextlib import asynccontextmanager
 
 # Asegurar que el directorio raíz esté en sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, Request, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -18,11 +21,23 @@ from src.database.connection import init_db, get_db_session
 from src.database.repository import ClinicRepository
 from src.agent.gemini_client import GeminiClinicAgent
 
+# Variables globales para control de login
+login_attempts: Dict[str, Dict[str, Any]] = {}
+active_captchas: Dict[str, int] = {}
+active_sessions: Set[str] = set()
+
+async def verify_admin_session(request: Request):
+    token = request.headers.get("X-Admin-Token")
+    if not token or token not in active_sessions:
+        raise HTTPException(status_code=401, detail="No autorizado o sesión expirada")
+    return token
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
     logger.info("Base de datos e infraestructura de Smile Aesthetic & Dental Clinic inicializada.")
     yield
+
 
 # Inicializar FastAPI
 app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)
@@ -92,14 +107,100 @@ async def handle_chat_api(payload: ChatRequest):
 
 # --- ENDPOINTS ADMINISTRATIVOS (WEB CRM) ---
 
+class LoginRequest(BaseModel):
+    password: str
+    captcha_answer: int
+    captcha_token: str
+
 @app.get("/admin-crm")
 async def get_admin_dashboard():
     """Servir panel de control oculto del administrador."""
     admin_path = os.path.join(web_dir, "admin.html")
     return FileResponse(admin_path)
 
+@app.get("/api/admin/captcha")
+async def get_captcha():
+    """Genera una pregunta matemática aleatoria para verificación."""
+    num1 = random.randint(1, 9)
+    num2 = random.randint(1, 9)
+    token = str(uuid.uuid4())
+    active_captchas[token] = num1 + num2
+    return {
+        "captcha_token": token,
+        "question": f"¿Cuánto es {num1} + {num2}?"
+    }
+
+@app.post("/api/admin/login")
+async def admin_login(payload: LoginRequest, request: Request):
+    """Verifica credenciales, captcha y aplica bloqueos de seguridad."""
+    client_ip = request.client.host
+    now = datetime.datetime.now()
+
+    # Verificar si la IP está bloqueada
+    ip_lock = login_attempts.get(client_ip)
+    if ip_lock and ip_lock["attempts"] >= 3:
+        if now < ip_lock["locked_until"]:
+            remaining = int((ip_lock["locked_until"] - now).total_seconds() / 60)
+            return JSONResponse(
+                status_code=403,
+                content={
+                    "status": "error",
+                    "response_text": f"Acceso bloqueado por seguridad (4 fallidos). Intenta de nuevo en {max(1, remaining)} minutos."
+                }
+            )
+        else:
+            # Reiniciar intentos tras cumplirse la hora de bloqueo
+            login_attempts[client_ip] = {"attempts": 0, "locked_until": now}
+
+    # Verificar CAPTCHA
+    correct_answer = active_captchas.get(payload.captcha_token)
+    if correct_answer is None or payload.captcha_answer != correct_answer:
+        # Registrar intento fallido
+        if client_ip not in login_attempts:
+            login_attempts[client_ip] = {"attempts": 1, "locked_until": now}
+        else:
+            login_attempts[client_ip]["attempts"] += 1
+            if login_attempts[client_ip]["attempts"] >= 3:
+                login_attempts[client_ip]["locked_until"] = now + datetime.timedelta(hours=1)
+        
+        attempts_left = 3 - login_attempts[client_ip]["attempts"]
+        return JSONResponse(
+            status_code=400,
+            content={
+                "status": "error",
+                "response_text": f"Verificación CAPTCHA incorrecta. Intentos restantes: {max(0, attempts_left)}."
+            }
+        )
+
+    # Remover CAPTCHA usado
+    active_captchas.pop(payload.captcha_token, None)
+
+    # Verificar Contraseña
+    if payload.password != settings.ADMIN_PASSWORD:
+        if client_ip not in login_attempts:
+            login_attempts[client_ip] = {"attempts": 1, "locked_until": now}
+        else:
+            login_attempts[client_ip]["attempts"] += 1
+            if login_attempts[client_ip]["attempts"] >= 3:
+                login_attempts[client_ip]["locked_until"] = now + datetime.timedelta(hours=1)
+        
+        attempts_left = 3 - login_attempts[client_ip]["attempts"]
+        return JSONResponse(
+            status_code=401,
+            content={
+                "status": "error",
+                "response_text": f"Contraseña incorrecta. Intentos restantes: {max(0, attempts_left)}."
+            }
+        )
+
+    # Login Exitoso: Reiniciar intentos y generar token
+    login_attempts[client_ip] = {"attempts": 0, "locked_until": now}
+    session_token = str(uuid.uuid4())
+    active_sessions.add(session_token)
+    return {"status": "success", "session_token": session_token}
+
 @app.get("/api/admin/stats")
-async def get_admin_stats():
+async def get_admin_stats(token: str = Depends(verify_admin_session)):
     """Obtiene KPIs de citas, leads y leads VIP."""
     try:
         async for session in get_db_session():
@@ -121,7 +222,7 @@ async def get_admin_stats():
         return {"total_leads": 0, "total_appointments": 0, "total_vip": 0}
 
 @app.get("/api/admin/leads")
-async def get_admin_leads():
+async def get_admin_leads(token: str = Depends(verify_admin_session)):
     """Obtiene el listado completo de prospectos (leads) del CRM."""
     try:
         async for session in get_db_session():
@@ -142,7 +243,7 @@ async def get_admin_leads():
         return []
 
 @app.get("/api/admin/appointments")
-async def get_admin_appointments():
+async def get_admin_appointments(token: str = Depends(verify_admin_session)):
     """Obtiene el listado de citas confirmadas."""
     try:
         async for session in get_db_session():
@@ -163,7 +264,7 @@ async def get_admin_appointments():
         return []
 
 @app.get("/api/admin/history/{phone_number}")
-async def get_admin_chat_history(phone_number: str):
+async def get_admin_chat_history(phone_number: str, token: str = Depends(verify_admin_session)):
     """Obtiene el historial de conversación completo de un paciente."""
     try:
         async for session in get_db_session():
