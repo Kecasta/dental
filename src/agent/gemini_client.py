@@ -64,7 +64,9 @@ class GeminiClinicAgent:
         """Ejecuta inferencia directa por REST API en Gemini para evitar problemas de firmas de google-auth."""
         import httpx
 
-        model_name = settings.GEMINI_MODEL or 'gemini-2.5-flash'
+        model_name = settings.GEMINI_MODEL or 'gemini-3.5-flash'
+
+
 
         # Preparar los mensajes del historial en formato REST de Gemini
         contents_payload = []
@@ -277,6 +279,8 @@ class GeminiClinicAgent:
         intent = "consulta"
         if "agendar_cita" in tools_called:
             intent = "agendamiento"
+        elif any(w in user_message.lower() for w in ["hola", "buenas", "buenos dias", "buenas tardes"]):
+            intent = "saludo"
 
         return {
             "response_text": reply_text,
@@ -284,6 +288,7 @@ class GeminiClinicAgent:
             "used_model": model_name,
             "tools_called": tools_called
         }
+
 
 
 
