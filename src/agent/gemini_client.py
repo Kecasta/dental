@@ -140,17 +140,61 @@ class GeminiClinicAgent:
             }
         }
 
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
         tools_called = []
         reply_text = ""
 
         # Bucle manual para resolver las llamadas de herramientas por API REST
         while True:
-            async with httpx.AsyncClient(timeout=30.0) as http_client:
-                res = await http_client.post(url, json=payload)
-                if res.status_code != 200:
-                    raise Exception(f"HTTP {res.status_code}: {res.text}")
-                data = res.json()
+            # Mecanismo de reintentos con múltiples esquemas de autenticación de Google
+            res = None
+            last_err = None
+
+            # Método 1: Cabecera x-goog-api-key (Recomendado para llaves AQ. nuevas)
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
+                headers = {"x-goog-api-key": self.api_key, "Content-Type": "application/json"}
+                async with httpx.AsyncClient(timeout=30.0) as http_client:
+                    res = await http_client.post(url, json=payload, headers=headers)
+                    if res.status_code == 200:
+                        data = res.json()
+                    else:
+                        raise Exception(f"Status {res.status_code}: {res.text}")
+            except Exception as e1:
+                last_err = e1
+                res = None
+
+            # Método 2: Cabecera Authorization Bearer (Para tokens de tipo OAuth2/Stitch)
+            if res is None:
+                try:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
+                    headers = {"Authorization": f"Bearer {self.api_key}", "Content-Type": "application/json"}
+                    async with httpx.AsyncClient(timeout=30.0) as http_client:
+                        res = await http_client.post(url, json=payload, headers=headers)
+                        if res.status_code == 200:
+                            data = res.json()
+                        else:
+                            raise Exception(f"Status {res.status_code}: {res.text}")
+                except Exception as e2:
+                    last_err = e2
+                    res = None
+
+            # Método 3: Parámetro en URL ?key= (Esquema clásico de Google AI Studio)
+            if res is None:
+                try:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
+                    async with httpx.AsyncClient(timeout=30.0) as http_client:
+                        res = await http_client.post(url, json=payload)
+                        if res.status_code == 200:
+                            data = res.json()
+                        else:
+                            raise Exception(f"Status {res.status_code}: {res.text}")
+                except Exception as e3:
+                    last_err = e3
+                    res = None
+
+            # Si todos los métodos fallaron, levantar la excepción
+            if res is None:
+                raise Exception(f"Todos los esquemas de autenticación fallaron. Último error: {last_err}")
 
             candidates = data.get("candidates", [])
             if not candidates:
@@ -167,6 +211,7 @@ class GeminiClinicAgent:
                 text_parts = [p.get("text") for p in parts if "text" in p]
                 reply_text = "".join(text_parts) if text_parts else ""
                 break
+
 
             # Procesar las herramientas solicitadas por el modelo
             model_parts_payload = []
