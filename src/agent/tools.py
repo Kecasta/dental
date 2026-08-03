@@ -23,6 +23,7 @@ def generate_time_slots(date_str: str) -> List[str]:
 async def tool_consultar_disponibilidad(fecha: str, hora: str) -> Dict[str, Any]:
     """
     Consulta la disponibilidad de agenda para Smile Aesthetic & Dental Clinic.
+    Busca alternativas en días posteriores si el día original está lleno.
     
     Args:
         fecha: Fecha en formato YYYY-MM-DD (ej: 2026-08-10).
@@ -31,38 +32,66 @@ async def tool_consultar_disponibilidad(fecha: str, hora: str) -> Dict[str, Any]
     try:
         async with async_session_factory() as session:
             repo = ClinicRepository(session)
-            is_available = await repo.check_availability(fecha, hora)
             
-            if is_available:
+            # Buscar slots libres en la fecha solicitada y siguientes (hasta 7 días)
+            target_date = datetime.datetime.strptime(fecha, "%Y-%m-%d")
+            found_slots = []
+            checked_date_str = fecha
+            
+            for i in range(7):
+                current_date = target_date + datetime.timedelta(days=i)
+                current_date_str = current_date.strftime("%Y-%m-%d")
+                
+                # Omitir domingos (weekday 6)
+                if current_date.weekday() == 6:
+                    continue
+                    
+                all_slots = generate_time_slots(current_date_str)
+                existing_appointments = await repo.get_appointments_by_date(current_date_str)
+                occupied_times = {app.appointment_time for app in existing_appointments}
+                
+                free_slots = [slot for slot in all_slots if slot not in occupied_times]
+                if free_slots:
+                    checked_date_str = current_date_str
+                    found_slots = free_slots
+                    break
+            
+            if not found_slots:
+                found_slots = ["09:00", "11:15", "15:00"]
+                
+            if checked_date_str == fecha:
+                is_available = hora in found_slots
+                if is_available:
+                    return {
+                        "disponible": True,
+                        "mensaje": f"El horario de las {hora} del {fecha} está disponible.",
+                        "fecha": fecha,
+                        "hora": hora,
+                        "horarios_sugeridos": found_slots[:4]
+                    }
+                else:
+                    return {
+                        "disponible": False,
+                        "mensaje": f"El horario de las {hora} del {fecha} ya se encuentra reservado.",
+                        "fecha_sugerida": fecha,
+                        "horarios_sugeridos": found_slots[:4]
+                    }
+            else:
                 return {
-                    "disponible": True,
-                    "mensaje": f"El horario de las {hora} del {fecha} está disponible.",
-                    "fecha": fecha,
-                    "hora": hora
+                    "disponible": False,
+                    "mensaje": f"La fecha {fecha} se encuentra completamente ocupada.",
+                    "fecha_sugerida": checked_date_str,
+                    "horarios_sugeridos": found_slots[:4]
                 }
-            
-            # Buscar alternativas si no está disponible
-            all_slots = generate_time_slots(fecha)
-            existing_appointments = await repo.get_appointments_by_date(fecha)
-            occupied_times = {app.appointment_time for app in existing_appointments}
-            
-            free_slots = [slot for slot in all_slots if slot not in occupied_times]
-            suggested = free_slots[:3] if free_slots else ["09:00", "11:15", "15:00"]
-            
-            return {
-                "disponible": False,
-                "mensaje": f"El horario de las {hora} ya se encuentra reservado.",
-                "horarios_sugeridos": suggested,
-                "fecha": fecha
-            }
     except Exception as e:
         logger.error(f"Error en tool_consultar_disponibilidad: {e}")
         return {
-            "disponible": True, # Fallback seguro
+            "disponible": True,
             "mensaje": f"Horario {hora} asignado tentativamente.",
             "fecha": fecha,
             "hora": hora
         }
+
 
 
 async def tool_agendar_cita(
