@@ -247,10 +247,7 @@ class GeminiClinicAgent:
                     logger.error(f"Error ejecutando herramienta {name}: {tool_err}")
                     result = {"error": str(tool_err)}
 
-                # Guardar la llamada del modelo y la respuesta de la herramienta
-                model_parts_payload.append({
-                    "functionCall": function_call
-                })
+                # Guardar la respuesta de la herramienta
                 tool_responses_payload.append({
                     "functionResponse": {
                         "name": name,
@@ -259,14 +256,12 @@ class GeminiClinicAgent:
                 })
 
             # Añadir ambos turnos al historial del payload para la siguiente iteración
-            payload["contents"].append({
-                "role": "model",
-                "parts": model_parts_payload
-            })
+            payload["contents"].append(candidate["content"])
             payload["contents"].append({
                 "role": "user",
                 "parts": tool_responses_payload
             })
+
 
         if not reply_text:
             reply_text = "Cita registrada con éxito. ¿Tienes alguna otra duda?"
