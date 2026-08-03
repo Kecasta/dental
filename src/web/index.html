@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html class="scroll-smooth" lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Smile Aesthetic | High-End Dental Clinic</title>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700&family=Hanken+Grotesk:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-bright": "#f9f9ff",
+                      "on-primary-fixed": "#002022",
+                      "surface-dim": "#cfdaf1",
+                      "on-primary-fixed-variant": "#234d51",
+                      "surface-tint": "#3c6569",
+                      "surface-variant": "#d8e3fa",
+                      "on-secondary-fixed-variant": "#214f41",
+                      "on-tertiary-container": "#9b9f9e",
+                      "tertiary-fixed-dim": "#c4c7c6",
+                      "error-container": "#ffdad6",
+                      "inverse-surface": "#263142",
+                      "error": "#ba1a1a",
+                      "on-error-container": "#93000a",
+                      "primary-fixed": "#bfeaef",
+                      "on-error": "#ffffff",
+                      "outline": "#717879",
+                      "primary-container": "#0d3b3f",
+                      "surface-container": "#e7eeff",
+                      "secondary-fixed-dim": "#a1d1bf",
+                      "on-surface-variant": "#404849",
+                      "on-surface": "#111c2c",
+                      "outline-variant": "#c0c8c9",
+                      "tertiary-fixed": "#e0e3e2",
+                      "on-secondary": "#ffffff",
+                      "on-primary-container": "#7ba5aa",
+                      "on-tertiary": "#ffffff",
+                      "background": "#f9f9ff",
+                      "on-background": "#111c2c",
+                      "surface": "#f9f9ff",
+                      "surface-container-lowest": "#ffffff",
+                      "tertiary-container": "#323636",
+                      "inverse-primary": "#a3ced3",
+                      "surface-container-low": "#f0f3ff",
+                      "on-tertiary-fixed-variant": "#434847",
+                      "surface-container-highest": "#d8e3fa",
+                      "surface-container-high": "#dee8ff",
+                      "primary-fixed-dim": "#a3ced3",
+                      "on-secondary-container": "#406d5e",
+                      "tertiary": "#1d2121",
+                      "secondary": "#3a6758",
+                      "primary": "#002428",
+                      "secondary-container": "#bcedda",
+                      "on-secondary-fixed": "#002118",
+                      "on-primary": "#ffffff",
+                      "inverse-on-surface": "#ebf1ff",
+                      "secondary-fixed": "#bcedda",
+                      "on-tertiary-fixed": "#181c1c"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "gutter": "24px",
+                      "unit": "8px",
+                      "container-max": "1200px",
+                      "margin-mobile": "20px",
+                      "margin-desktop": "64px",
+                      "section-gap": "120px"
+              },
+              "fontFamily": {
+                      "display": ["EB Garamond", "serif"],
+                      "headline-lg-mobile": ["EB Garamond", "serif"],
+                      "body-lg": ["Hanken Grotesk", "sans-serif"],
+                      "label-caps": ["Hanken Grotesk", "sans-serif"],
+                      "headline-lg": ["EB Garamond", "serif"],
+                      "headline-md": ["EB Garamond", "serif"],
+                      "body-md": ["Hanken Grotesk", "sans-serif"]
+              },
+              "fontSize": {
+                      "display": ["48px", { "lineHeight": "1.1", "letterSpacing": "-0.02em", "fontWeight": "500" }],
+                      "headline-lg-mobile": ["28px", { "lineHeight": "1.2", "fontWeight": "500" }],
+                      "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                      "label-caps": ["12px", { "lineHeight": "1.0", "letterSpacing": "0.1em", "fontWeight": "600" }],
+                      "headline-lg": ["32px", { "lineHeight": "1.2", "fontWeight": "500" }],
+                      "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "500" }],
+                      "body-md": ["16px", { "lineHeight": "1.5", "fontWeight": "400" }]
+              }
+            }
+          }
+        }
+    </script>
+    <style>
+        body { background-color: theme('colors.background'); color: theme('colors.on-background'); }
+        .glass-panel { background: rgba(249, 249, 255, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border: 1px solid rgba(192, 200, 201, 0.2); }
+        .hover-lift { transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .hover-lift:hover { transform: translateY(-4px); box-shadow: 0 12px 40px rgba(13, 59, 63, 0.08); }
+        .service-card-border { border: 1px solid rgba(113, 120, 121, 0.15); }
+    </style>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="antialiased min-h-screen flex flex-col font-body-md text-body-md relative">
+
+<!-- TopNavBar -->
+<header class="fixed top-0 w-full z-50 flex justify-between items-center px-margin-mobile md:px-margin-desktop h-20 max-w-container-max mx-auto bg-surface/90 backdrop-blur-md border-b border-outline-variant/10">
+    <div class="flex items-center gap-4">
+        <img alt="Clinic Logo" class="w-10 h-10 object-contain rounded-full" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAOMdGGXNrrAgQDlh1ipK_rmETPifmbrOKn2TZ6ELcRYbuf4DSgtIo8ytaMMTq6oZIxExDcSZtBBDlRqLXgKwsbk4lNBLOAh8G0euqEncC7tYrV1QTYP6opQKaCAhQKntJayidzlzUlvwQiR356nvQmkD8pZCaXxWTQG7bny0WmUdVHGkPzQBaqT_c7ytDou0CBLGyjXPeHk14vfPllDgEsSXevOSTx7AjmBY5ucCeJmy8WHSxo_yOpmA"/>
+        <span class="font-display text-headline-md text-primary tracking-tight">Smile Aesthetic</span>
+    </div>
+    <nav class="hidden md:flex items-center gap-8 font-display text-headline-md font-body-md text-body-md">
+        <a class="text-on-surface-variant hover:text-primary transition-colors duration-300" href="#services">Servicios</a>
+        <a class="text-on-surface-variant hover:text-primary transition-colors duration-300" href="#about">Nosotros</a>
+        <a class="text-on-surface-variant hover:text-primary transition-colors duration-300" href="#testimonials">Testimonios</a>
+    </nav>
+    <button onclick="openChat('¡Hola! Quisiera agendar una cita de valoración en Smile Aesthetic.')" class="hidden md:inline-flex bg-primary-container text-on-primary rounded font-label-caps text-label-caps px-6 py-3 uppercase tracking-wider hover:bg-on-primary-fixed-variant transition-colors">
+        Agendar Cita 24/7
+    </button>
+    <button class="md:hidden text-primary" onclick="openChat('Hola Sofía, deseo agendar cita.')">
+        <span class="material-symbols-outlined text-3xl">calendar_month</span>
+    </button>
+</header>
+
+<main class="flex-grow pt-20">
+    <!-- Hero Section -->
+    <section class="relative min-h-[85vh] flex items-center justify-center px-margin-mobile md:px-margin-desktop overflow-hidden">
+        <div class="absolute inset-0 z-0">
+            <div class="w-full h-full bg-cover bg-center bg-no-repeat opacity-40" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBaPTQp0tBBWY00KWXlEOZWJw_3PxfiTF8AkANoQsKi-ClL75rJ4IVsj3IDTiukYqETPvg3FdLEfbiTTGRGUUSADH5MRtS2Mcpnb00UPzLOqQs5bsB7GIGnSgenw6Cs2TiBXBCk49QAO5kjRuC4toEzArX4H3JI2bYp4CA2uvOZTBXxzitB3qP9ljmsTQpkaT_oNgCoqRPw95zlSueZX2Cij037bjN-0a3ImE5k2VSDnJjGE-oJfmC6lQ')"></div>
+            <div class="absolute inset-0 bg-gradient-to-b from-background/60 via-background/20 to-background"></div>
+        </div>
+        <div class="relative z-10 max-w-4xl mx-auto text-center mt-20">
+            <h1 class="font-display text-display text-primary mb-6 animate-fade-in-up">El Arte en Cada Sonrisa.</h1>
+            <p class="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto mb-10 leading-relaxed">Experimente un nuevo estándar de cuidado dental donde la experiencia médica avanzada se une al diseño estético a medida. Un santuario para su versión más segura.</p>
+            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <button onclick="openChat('Hola Sofía, deseo iniciar mi valoración para Diseño de Sonrisa.')" class="bg-primary-container text-on-primary rounded font-label-caps text-label-caps px-8 py-4 uppercase tracking-wider hover:bg-on-primary-fixed-variant transition-colors w-full sm:w-auto">
+                    Comience su Viaje
+                </button>
+                <a href="#services" class="bg-transparent border border-primary text-primary rounded font-label-caps text-label-caps px-8 py-4 uppercase tracking-wider hover:bg-surface-dim transition-colors w-full sm:w-auto inline-block text-center py-4">
+                    Explorar Servicios
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Grid Section -->
+    <section class="py-16 px-margin-mobile md:px-margin-desktop bg-surface-bright" id="services">
+        <div class="max-w-container-max mx-auto">
+            <div class="text-center mb-12">
+                <h2 class="font-display text-headline-lg text-primary mb-3">Nuestros Tratamientos Signature</h2>
+                <p class="font-body-lg text-on-surface-variant">Procedimientos exclusivos adaptados a su fisionomía facial.</p>
+            </div>
+            
+            <div class="grid md:grid-cols-3 gap-8">
+                <!-- Card 1 -->
+                <div class="glass-panel p-8 rounded-xl hover-lift service-card-border flex flex-col justify-between">
+                    <div>
+                        <span class="text-secondary font-label-caps text-xs tracking-widest uppercase mb-2 block">Tratamiento VIP</span>
+                        <h3 class="font-display text-headline-md text-primary mb-3">Diseño de Sonrisa 3D</h3>
+                        <p class="font-body-md text-on-surface-variant mb-6">Carillas cerámicas ultra-finas y planificación digital 3D sin fricción.</p>
+                    </div>
+                    <button onclick="openChat('Deseo información sobre Diseño de Sonrisa 3D')" class="w-full bg-primary-container text-on-primary font-label-caps text-xs py-3 uppercase tracking-wider rounded hover:bg-on-primary-fixed-variant transition-colors">
+                        Consultar Disponibilidad
+                    </button>
+                </div>
+
+                <!-- Card 2 -->
+                <div class="glass-panel p-8 rounded-xl hover-lift service-card-border flex flex-col justify-between">
+                    <div>
+                        <span class="text-secondary font-label-caps text-xs tracking-widest uppercase mb-2 block">Tratamiento VIP</span>
+                        <h3 class="font-display text-headline-md text-primary mb-3">Armonización Facial</h3>
+                        <p class="font-body-md text-on-surface-variant mb-6">Perfilado labial y rejuvenecimiento biocompatible con ácido hialurónico.</p>
+                    </div>
+                    <button onclick="openChat('Deseo información sobre Armonización Facial')" class="w-full bg-primary-container text-on-primary font-label-caps text-xs py-3 uppercase tracking-wider rounded hover:bg-on-primary-fixed-variant transition-colors">
+                        Consultar Disponibilidad
+                    </button>
+                </div>
+
+                <!-- Card 3 -->
+                <div class="glass-panel p-8 rounded-xl hover-lift service-card-border flex flex-col justify-between">
+                    <div>
+                        <span class="text-secondary font-label-caps text-xs tracking-widest uppercase mb-2 block">Ortodoncia Premium</span>
+                        <h3 class="font-display text-headline-md text-primary mb-3">Alineadores Invisibles</h3>
+                        <p class="font-body-md text-on-surface-variant mb-6">Ortodoncia transparente invisible sin brackets y con escáner intraoral.</p>
+                    </div>
+                    <button onclick="openChat('Deseo información sobre Alineadores Invisibles')" class="w-full bg-primary-container text-on-primary font-label-caps text-xs py-3 uppercase tracking-wider rounded hover:bg-on-primary-fixed-variant transition-colors">
+                        Consultar Disponibilidad
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Our Philosophy -->
+    <section class="py-section-gap px-margin-mobile md:px-margin-desktop bg-surface-bright" id="about">
+        <div class="max-w-container-max mx-auto grid md:grid-cols-2 gap-16 items-center">
+            <div class="order-2 md:order-1 relative h-[500px] w-full rounded-xl overflow-hidden service-card-border">
+                <div class="w-full h-full bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDrpSMGqSgrTzARzB23EcSinAP0vzSKq4p_CmdhvJ8CwlbmbP6VlY_xmALSOBXRVZ24zTlTLu_rbqGIX2LImN4aePjLD3Mgl5WQ51fPItK6GHvo7dVb1-yhjxqz2FH9emNssEfAukApl8nDyHEEBTcYiAG8Kl5zy4OQn2kD3Turu61IP5qD1DnRf5ADgFcRLUsL_jXKbW56OH-8hSetxqqyDX1EYDKKdoRRbMGPn_YfD-kXCwq8wSB0dg')"></div>
+            </div>
+            <div class="order-1 md:order-2">
+                <h2 class="font-display text-headline-lg-mobile md:text-headline-lg text-primary mb-6">Redefiniendo la Elegancia Dental</h2>
+                <p class="font-body-lg text-body-lg text-on-surface-variant mb-6">En Smile Aesthetic, creemos que su salud oral y sus metas estéticas están intrínsecamente ligadas. Nuestra filosofía se centra en técnicas mínimamente invasivas, seguridad sin concesiones y un entorno meticulosamente diseñado para su total tranquilidad.</p>
+                <ul class="space-y-4 font-body-md text-body-md text-on-surface">
+                    <li class="flex items-start gap-3">
+                        <span class="material-symbols-outlined text-secondary mt-1">verified</span>
+                        <span>Planes de tratamiento a medida adaptados a su arquitectura facial única.</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="material-symbols-outlined text-secondary mt-1">spa</span>
+                        <span>Una atmósfera boutique serena y lujosa que reemplaza la ansiedad clínica.</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="material-symbols-outlined text-secondary mt-1">health_and_safety</span>
+                        <span>Tecnología de diagnóstico de vanguardia que garantiza una precisión absoluta.</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- Footer -->
+<footer class="w-full py-gutter px-margin-mobile md:px-margin-desktop flex flex-col md:flex-row justify-between items-center gap-unit bg-surface-container-low border-t border-outline-variant/10 mt-section-gap">
+    <div class="font-display text-headline-md text-primary">Smile Aesthetic</div>
+    <div class="flex flex-wrap justify-center gap-6 font-label-caps text-label-caps text-on-surface-variant">
+        <a class="hover:text-primary transition-colors" href="#">Política de Privacidad</a>
+        <a class="hover:text-primary transition-colors" href="#">Términos de Servicio</a>
+        <a class="hover:text-primary transition-colors" href="#">Contáctenos</a>
+    </div>
+    <div class="font-body-md text-body-md text-on-surface-variant text-sm">
+        © 2026 Smile Aesthetic &amp; Dental Clinic. Todos los derechos reservados.
+    </div>
+</footer>
+
+<!-- Live Chat Widget Component (Sofía IA 24/7) -->
+<div id="chat-widget" class="chat-widget-container">
+    <button id="chat-toggle" class="chat-toggle-btn" onclick="toggleChatWindow()">
+        <span class="pulse-ring"></span>
+        <span class="material-symbols-outlined text-2xl">chat</span>
+        <span class="badge-status">Online 24/7</span>
+    </button>
+
+    <div id="chat-window" class="chat-window hidden">
+        <div class="chat-header">
+            <div class="agent-avatar">
+                <img src="https://images.unsplash.com/photo-1594824813566-88855ce78965?w=100&auto=format&fit=crop&q=80" alt="Sofía IA">
+                <span class="online-indicator"></span>
+            </div>
+            <div class="agent-info">
+                <h4>Sofía — Asesora IA 24/7</h4>
+                <p>Smile Aesthetic & Dental Clinic</p>
+            </div>
+            <button class="chat-close-btn" onclick="toggleChatWindow()">✕</button>
+        </div>
+
+        <div id="chat-messages" class="chat-messages">
+            <div class="message agent">
+                <div class="msg-bubble">
+                    ¡Hola! ✨ Bienvenido a **Smile Aesthetic & Dental Clinic**. Soy Sofía, tu asesora virtual. ¿Qué tratamiento deseas consultar o agendar hoy?
+                </div>
+                <span class="msg-time">Ahora</span>
+            </div>
+        </div>
+
+        <div class="chat-input-area">
+            <input type="text" id="chat-input" placeholder="Escribe tu mensaje..." onkeypress="handleKeyPress(event)">
+            <button id="chat-send" class="chat-send-btn" onclick="sendMessage()">➔</button>
+        </div>
+
+        <div class="chat-footer-brand">
+            Powered by <strong>Kinexus Smart Data</strong>
+        </div>
+    </div>
+</div>
+
+<script src="widget.js"></script>
+</body>
+</html>

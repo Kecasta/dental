@@ -1,0 +1,96 @@
+{
+  "name": "Smile Clinic - Agendador & Calificador 24/7",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-smile-clinic",
+        "options": {}
+      },
+      "name": "Webhook WhatsApp Entry",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.body.entry[0].changes[0].value.messages[0].type }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "text",
+              "outputKey": "Texto"
+            },
+            {
+              "value2": "audio",
+              "outputKey": "Audio"
+            }
+          ]
+        }
+      },
+      "name": "Switch Tipo Mensaje",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 1,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "model": "gemini-2.5-flash",
+        "prompt": "=Eres Sofía, asistente virtual de Smile Aesthetic & Dental Clinic. Atiende al paciente: {{ $json.body.entry[0].changes[0].value.messages[0].text.body }}"
+      },
+      "name": "Google Gemini 2.5 Flash Agent",
+      "type": "n8n-nodes-base.googleGemini",
+      "typeVersion": 1,
+      "position": [700, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://108.174.153.110:8050/api/chat",
+        "method": "POST",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"phone_number\": \"{{ $json.body.entry[0].changes[0].value.messages[0].from }}\",\n  \"message\": \"{{ $json.body.entry[0].changes[0].value.messages[0].text.body }}\",\n  \"channel\": \"whatsapp\"\n}"
+      },
+      "name": "HTTP Request - Python Backend Sync",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 1,
+      "position": [950, 300]
+    }
+  ],
+  "connections": {
+    "Webhook WhatsApp Entry": {
+      "main": [
+        [
+          {
+            "node": "Switch Tipo Mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Tipo Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Google Gemini 2.5 Flash Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini 2.5 Flash Agent": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request - Python Backend Sync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

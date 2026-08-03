@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  n8n-demos:
+    image: docker.n8n.io/n8nio/n8n:latest
+    container_name: n8n-demos-agendador
+    restart: always
+    ports:
+      - "5685:5678"
+    environment:
+      - N8N_HOST=docker.kinexusdata.com
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - N8N_SECURE_COOKIE=false
+      - NODE_ENV=production
+      - WEBHOOK_URL=http://docker.kinexusdata.com:5685/
+      - GENERIC_TIMEZONE=America/Bogota
+      - N8N_DEFAULT_LOCALE=es
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_MAX_AGE=168
+    volumes:
+      - n8n_demos_data:/home/node/.n8n
+
+volumes:
+  n8n_demos_data:
+    name: n8n_demos_data

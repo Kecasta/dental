@@ -1,0 +1,11 @@
+.env
+config/*.json
+!config/n8n_workflow.json
+*.db
+__pycache__/
+.pytest_cache/
+.vscode/
+data/
+logs/
+venv/
+.agents/
