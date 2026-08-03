@@ -57,34 +57,130 @@ class GeminiClinicAgent:
         history: List[Dict[str, str]],
         phone_number: str
     ) -> Dict[str, Any]:
-        """Ejecuta inferencia en Gemini 2.5/3.5 Flash."""
-        # Estructurar contexto de conversación
-        prompt_content = f"{CLINIC_SYSTEM_PROMPT}\n\n"
-        prompt_content += f"Número del cliente actual: {phone_number}\n"
-        prompt_content += "Historial reciente:\n"
-        for h in history[-5:]:
-            prompt_content += f"- {h['sender']}: {h['content']}\n"
-        prompt_content += f"- user: {user_message}\n\nResponde como Sofía (IA de Smile Clinic):"
+        """Ejecuta inferencia en Gemini 2.5/3.5 Flash utilizando Function Calling nativo."""
+        from google.genai import types
 
         model_name = settings.GEMINI_MODEL or 'gemini-2.5-flash'
+        tools_list = [
+            tool_consultar_disponibilidad,
+            tool_agendar_cita,
+            tool_calificar_prospecto
+        ]
+
+        # Configurar la instrucción del sistema y las herramientas
+        config = types.GenerateContentConfig(
+            system_instruction=CLINIC_SYSTEM_PROMPT,
+            tools=tools_list,
+            temperature=0.7,
+        )
+
+        # Construir el historial estructurado de la conversación
+        contents = []
+        for h in history[-10:]:
+            role = "user" if h["sender"] == "user" else "model"
+            contents.append(
+                types.Content(
+                    role=role,
+                    parts=[types.Part.from_text(text=h["content"])]
+                )
+            )
+        
+        # Añadir el último mensaje del usuario
+        contents.append(
+            types.Content(
+                role="user",
+                parts=[types.Part.from_text(text=user_message)]
+            )
+        )
+
+        # Primera llamada al modelo
         response = self.client.models.generate_content(
             model=model_name,
-            contents=prompt_content,
+            contents=contents,
+            config=config
         )
-        
-        reply_text = response.text if response and response.text else "¡Hola! Bienvenido a Smile Aesthetic & Dental Clinic. ¿En qué te puedo asesorar hoy?"
 
-        # Verificar intención básica de agendamiento
+        tools_called = []
+        
+        # Bucle para resolver las llamadas de herramientas (Function Calling loop)
+        while response.function_calls:
+            tool_responses = []
+            model_parts = []
+            
+            for function_call in response.function_calls:
+                name = function_call.name
+                args = function_call.args
+                logger.info(f"Gemini solicitó ejecutar la herramienta: '{name}' con argumentos: {args}")
+                tools_called.append(name)
+                
+                # Ejecutar la herramienta correspondiente
+                result = None
+                try:
+                    if name == "consultar_disponibilidad":
+                        result = await tool_consultar_disponibilidad(
+                            fecha=args.get("fecha"),
+                            hora=args.get("hora")
+                        )
+                    elif name == "agendar_cita":
+                        result = await tool_agendar_cita(
+                            nombre=args.get("nombre"),
+                            telefono=phone_number,
+                            servicio=args.get("servicio"),
+                            fecha=args.get("fecha"),
+                            hora=args.get("hora")
+                        )
+                    elif name == "calificar_prospecto":
+                        result = await tool_calificar_prospecto(
+                            telefono=phone_number,
+                            score=args.get("score"),
+                            servicio=args.get("servicio"),
+                            notes=args.get("notes")
+                        )
+                except Exception as tool_err:
+                    logger.error(f"Error ejecutando herramienta {name}: {tool_err}")
+                    result = {"error": str(tool_err)}
+
+                # Añadir la respuesta de la herramienta
+                tool_responses.append(
+                    types.Part.from_function_response(
+                        name=name,
+                        response={"result": result}
+                    )
+                )
+                
+                # Guardar la llamada hecha por el modelo
+                model_parts.append(
+                    types.Part.from_function_call(
+                        name=name,
+                        args=args
+                    )
+                )
+            
+            # Añadir las llamadas del modelo y sus respuestas al historial de contents
+            contents.append(types.Content(role="model", parts=model_parts))
+            contents.append(types.Content(role="user", parts=tool_responses))
+            
+            # Re-invocar a Gemini con los resultados de las herramientas
+            response = self.client.models.generate_content(
+                model=model_name,
+                contents=contents,
+                config=config
+            )
+
+        reply_text = response.text if response and response.text else "Cita registrada con éxito. ¿Tienes alguna otra duda?"
+
+        # Determinar intención
         intent = "consulta"
-        if "agend" in user_message.lower() or "cita" in user_message.lower() or "reserv" in user_message.lower():
+        if "agendamiento_exitoso" in tools_called or "agendar_cita" in tools_called:
             intent = "agendamiento"
 
         return {
             "response_text": reply_text,
             "intent": intent,
             "used_model": model_name,
-            "tools_called": []
+            "tools_called": tools_called
         }
+
 
 
     async def _heuristic_fallback(self, phone_number: str, user_message: str) -> Dict[str, Any]:
