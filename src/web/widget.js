@@ -5,18 +5,27 @@ const USER_PHONE = "+57300" + Math.floor(1000000 + Math.random() * 9000000); // 
 
 function toggleChatWindow() {
     const chatWindow = document.getElementById("chat-window");
+    const container = document.getElementById("chat-widget");
     chatWindow.classList.toggle("hidden");
+    if (container) {
+        container.classList.toggle("active-chat", !chatWindow.classList.contains("hidden"));
+    }
 }
 
 function openChat(initialText = "") {
     const chatWindow = document.getElementById("chat-window");
+    const container = document.getElementById("chat-widget");
     chatWindow.classList.remove("hidden");
+    if (container) {
+        container.classList.add("active-chat");
+    }
     if (initialText) {
         const input = document.getElementById("chat-input");
         input.value = initialText;
         sendMessage();
     }
 }
+
 
 function handleKeyPress(event) {
     if (event.key === "Enter") {
