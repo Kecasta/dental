@@ -5,19 +5,19 @@ const USER_PHONE = "+57300" + Math.floor(1000000 + Math.random() * 9000000); // 
 
 function toggleChatWindow() {
     const chatWindow = document.getElementById("chat-window");
-    const container = document.getElementById("chat-widget");
+    const toggleBtn = document.getElementById("chat-toggle");
     chatWindow.classList.toggle("hidden");
-    if (container) {
-        container.classList.toggle("active-chat", !chatWindow.classList.contains("hidden"));
+    if (toggleBtn) {
+        toggleBtn.classList.toggle("chat-open-hidden", !chatWindow.classList.contains("hidden"));
     }
 }
 
 function openChat(initialText = "") {
     const chatWindow = document.getElementById("chat-window");
-    const container = document.getElementById("chat-widget");
+    const toggleBtn = document.getElementById("chat-toggle");
     chatWindow.classList.remove("hidden");
-    if (container) {
-        container.classList.add("active-chat");
+    if (toggleBtn) {
+        toggleBtn.classList.add("chat-open-hidden");
     }
     if (initialText) {
         const input = document.getElementById("chat-input");
@@ -25,6 +25,7 @@ function openChat(initialText = "") {
         sendMessage();
     }
 }
+
 
 
 function handleKeyPress(event) {

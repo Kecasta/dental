@@ -216,23 +216,11 @@
 
 /* Adaptación Responsive para Móviles y Celulares */
 @media (max-width: 768px) {
-    #chat-widget.active-chat {
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        width: 100vw !important;
-        height: 100dvh !important;
-        height: 100vh !important;
-        z-index: 99999 !important;
+    .chat-widget-container {
+        position: static !important;
     }
 
-    #chat-window {
-        max-width: 92vw !important;
-    }
-
-    #chat-widget.active-chat #chat-window {
+    #chat-window:not(.hidden) {
         position: fixed !important;
         top: 0 !important;
         left: 0 !important;
@@ -246,20 +234,23 @@
         border-radius: 0 !important;
         border: none !important;
         box-shadow: none !important;
-        z-index: 100000 !important;
+        z-index: 999999 !important;
+        margin: 0 !important;
     }
 
-    #chat-widget.active-chat #chat-toggle {
+    .chat-toggle-btn.chat-open-hidden,
+    .chat-widget-container:has(#chat-window:not(.hidden)) .chat-toggle-btn {
         display: none !important;
     }
 
-    #chat-widget .chat-messages {
+    .chat-messages {
         padding: 12px !important;
     }
 
-    #chat-widget .message {
+    .message {
         max-width: 92% !important;
     }
 }
+
 
 
