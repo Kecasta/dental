@@ -244,11 +244,20 @@ async def get_admin_leads(token: str = Depends(verify_admin_session)):
 
 @app.get("/api/admin/appointments")
 async def get_admin_appointments(token: str = Depends(verify_admin_session)):
-    """Obtiene el listado de citas confirmadas."""
+    """Obtiene el listado de citas confirmadas deduplicado."""
     try:
         async for session in get_db_session():
             repo = ClinicRepository(session)
             appointments = await repo.get_all_appointments()
+
+            unique_appointments = []
+            seen = set()
+            for a in appointments:
+                key = (a.phone_number, a.appointment_date, a.appointment_time, a.service_name)
+                if key not in seen:
+                    seen.add(key)
+                    unique_appointments.append(a)
+
             return [
                 {
                     "patient_name": a.patient_name,
@@ -257,11 +266,12 @@ async def get_admin_appointments(token: str = Depends(verify_admin_session)):
                     "appointment_time": a.appointment_time,
                     "specialist": a.specialist
                 }
-                for a in appointments
+                for a in unique_appointments
             ]
     except Exception as e:
         logger.error(f"Error al obtener citas: {e}")
         return []
+
 
 @app.get("/api/admin/history/{phone_number}")
 async def get_admin_chat_history(phone_number: str, token: str = Depends(verify_admin_session)):

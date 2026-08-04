@@ -57,6 +57,21 @@ class ClinicRepository:
         payment_amount: float = 0.0
     ) -> Appointment:
         lead = await self.get_or_create_lead(phone_number, full_name=patient_name)
+
+        # Comprobar si ya existe una cita exactamente igual para evitar duplicados
+        existing_result = await self.session.execute(
+            select(Appointment).where(
+                Appointment.phone_number == phone_number,
+                Appointment.appointment_date == appointment_date,
+                Appointment.appointment_time == appointment_time,
+                Appointment.service_name == service_name,
+                Appointment.status != "Cancelada"
+            )
+        )
+        existing = existing_result.scalars().first()
+        if existing:
+            return existing
+
         appointment = Appointment(
             lead_id=lead.id,
             patient_name=patient_name,
@@ -72,6 +87,7 @@ class ClinicRepository:
         await self.session.commit()
         await self.session.refresh(appointment)
         return appointment
+
 
     async def check_availability(self, date_str: str, time_str: str) -> bool:
         result = await self.session.execute(
