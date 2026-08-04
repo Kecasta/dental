@@ -166,9 +166,11 @@ class GeminiClinicAgent:
                     if attempt == 2:
                         logger.warning(f"Intento 1 (x-goog-api-key) falló tras 3 reintentos con: {e1}")
                         last_err = e1
-                        res = None
                     else:
+                        await asyncio.sleep(1.0)
+
             # Método 1.5: Fallback a modelo gemini-2.0-flash si hay sobrecarga 503 en el principal
+
             if res is None and last_err and "503" in str(last_err):
                 fallback_model = "gemini-2.0-flash" if model_name != "gemini-2.0-flash" else "gemini-1.5-flash"
                 logger.info(f"Cambiando a modelo de respaldo ultra-rápido {fallback_model} por alta demanda de Google...")
