@@ -40,11 +40,17 @@ async def tool_consultar_disponibilidad(fecha: str = None, hora: str = None) -> 
         async with async_session_factory() as session:
             repo = ClinicRepository(session)
             
+            today = datetime.date.today()
+            tomorrow = today + datetime.timedelta(days=1)
+
             try:
                 target_date = datetime.datetime.strptime(fecha, "%Y-%m-%d").date()
+                if target_date < today:
+                    target_date = tomorrow
             except Exception:
-                target_date = datetime.date.today() + datetime.timedelta(days=1)
+                target_date = tomorrow
                 fecha = target_date.strftime("%Y-%m-%d")
+
 
             dias_semana_es = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
             meses_es = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]

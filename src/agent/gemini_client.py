@@ -126,17 +126,23 @@ class GeminiClinicAgent:
             }
         ]
 
+        today_date = datetime.date.today()
+        dias_es = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+        meses_es = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+        today_formatted = f"{dias_es[today_date.weekday()]} {today_date.day} de {meses_es[today_date.month - 1]} de {today_date.year} ({today_date.strftime('%Y-%m-%d')})"
+
         # Payload completo de la API REST
         payload = {
             "contents": contents_payload,
             "systemInstruction": {
-                "parts": [{"text": CLINIC_SYSTEM_PROMPT}]
+                "parts": [{"text": f"{CLINIC_SYSTEM_PROMPT}\n\n[CONTEXTO TEMPORAL DE HOY: Hoy es {today_formatted}]. Target de disponibilidad siempre a partir de hoy o mañana."}]
             },
             "tools": tools_payload,
             "generationConfig": {
                 "temperature": 0.7
             }
         }
+
 
         tools_called = []
         reply_text = ""
