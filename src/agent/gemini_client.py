@@ -1,7 +1,9 @@
 import os
 import json
 import datetime
+import asyncio
 from typing import Dict, Any, List, Optional
+
 from config.settings import settings
 from config.logging_config import logger
 from src.agent.prompts import CLINIC_SYSTEM_PROMPT, CLINIC_SERVICES
@@ -143,20 +145,30 @@ class GeminiClinicAgent:
             res = None
             last_err = None
 
-            # Método 1: Cabecera x-goog-api-key (Recomendado para llaves AQ. nuevas)
-            try:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
-                headers = {"x-goog-api-key": self.api_key, "Content-Type": "application/json"}
-                async with httpx.AsyncClient(timeout=30.0) as http_client:
-                    res = await http_client.post(url, json=payload, headers=headers)
-                    if res.status_code == 200:
-                        data = res.json()
+            # Método 1: Cabecera x-goog-api-key con reintento automático para 503 / 429
+            for attempt in range(3):
+                try:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
+                    headers = {"x-goog-api-key": self.api_key, "Content-Type": "application/json"}
+                    async with httpx.AsyncClient(timeout=30.0) as http_client:
+                        res = await http_client.post(url, json=payload, headers=headers)
+                        if res.status_code == 200:
+                            data = res.json()
+                            break
+                        elif res.status_code in (503, 429) and attempt < 2:
+                            logger.warning(f"Servidor de Google ocupado (Status {res.status_code}). Reintentando en 1.5s (intento {attempt+1}/3)...")
+                            await asyncio.sleep(1.5)
+                            continue
+                        else:
+                            raise Exception(f"Status {res.status_code}: {res.text}")
+                except Exception as e1:
+                    if attempt == 2:
+                        logger.warning(f"Intento 1 (x-goog-api-key) falló tras 3 reintentos con: {e1}")
+                        last_err = e1
+                        res = None
                     else:
-                        raise Exception(f"Status {res.status_code}: {res.text}")
-            except Exception as e1:
-                logger.warning(f"Intento 1 (x-goog-api-key) falló con: {e1}")
-                last_err = e1
-                res = None
+                        await asyncio.sleep(1.0)
+
 
             # Método 2: Cabecera Authorization Bearer (Para tokens de tipo OAuth2/Stitch)
             if res is None:
