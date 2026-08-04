@@ -59,6 +59,9 @@ class GeminiClinicAgent:
         import httpx
 
         model_name = settings.GEMINI_MODEL or 'gemini-2.0-flash'
+        if "3.5" in str(model_name):
+            model_name = "gemini-2.0-flash"
+
 
 
 
