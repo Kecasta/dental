@@ -168,10 +168,24 @@ class GeminiClinicAgent:
                         last_err = e1
                         res = None
                     else:
-                        await asyncio.sleep(1.0)
-
+            # Método 1.5: Fallback a modelo gemini-2.0-flash si hay sobrecarga 503 en el principal
+            if res is None and last_err and "503" in str(last_err):
+                fallback_model = "gemini-2.0-flash" if model_name != "gemini-2.0-flash" else "gemini-1.5-flash"
+                logger.info(f"Cambiando a modelo de respaldo ultra-rápido {fallback_model} por alta demanda de Google...")
+                try:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{fallback_model}:generateContent"
+                    headers = {"x-goog-api-key": self.api_key, "Content-Type": "application/json"}
+                    async with httpx.AsyncClient(timeout=30.0) as http_client:
+                        res = await http_client.post(url, json=payload, headers=headers)
+                        if res.status_code == 200:
+                            data = res.json()
+                        else:
+                            raise Exception(f"Status {res.status_code}: {res.text}")
+                except Exception as e_fb:
+                    logger.warning(f"Modelo de respaldo {fallback_model} falló con: {e_fb}")
 
             # Método 2: Cabecera Authorization Bearer (Para tokens de tipo OAuth2/Stitch)
+
             if res is None:
                 try:
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
