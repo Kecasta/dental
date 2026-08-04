@@ -145,6 +145,7 @@ class GeminiClinicAgent:
         while True:
             # Mecanismo de reintentos con múltiples esquemas de autenticación de Google
             res = None
+            data = None
             last_err = None
 
             # Método 1: Cabecera x-goog-api-key con reintento automático para 503 / 429
@@ -167,11 +168,11 @@ class GeminiClinicAgent:
                     if attempt == 2:
                         logger.warning(f"Intento 1 (x-goog-api-key) falló tras 3 reintentos con: {e1}")
                         last_err = e1
+                        res = None
                     else:
                         await asyncio.sleep(1.0)
 
             # Método 1.5: Fallback a modelo gemini-2.0-flash si hay sobrecarga 503 en el principal
-
             if res is None and last_err and "503" in str(last_err):
                 fallback_model = "gemini-2.0-flash" if model_name != "gemini-2.0-flash" else "gemini-1.5-flash"
                 logger.info(f"Cambiando a modelo de respaldo ultra-rápido {fallback_model} por alta demanda de Google...")
@@ -186,6 +187,8 @@ class GeminiClinicAgent:
                             raise Exception(f"Status {res.status_code}: {res.text}")
                 except Exception as e_fb:
                     logger.warning(f"Modelo de respaldo {fallback_model} falló con: {e_fb}")
+                    last_err = e_fb
+                    res = None
 
             # Método 2: Cabecera Authorization Bearer (Para tokens de tipo OAuth2/Stitch)
 
@@ -220,8 +223,8 @@ class GeminiClinicAgent:
                     res = None
 
 
-            # Si todos los métodos fallaron, levantar la excepción
-            if res is None:
+            # Si todos los métodos fallaron o no se obtuvieron datos válidos, levantar la excepción
+            if res is None or data is None:
                 raise Exception(f"Todos los esquemas de autenticación fallaron. Último error: {last_err}")
 
             candidates = data.get("candidates", [])
