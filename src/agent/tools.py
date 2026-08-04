@@ -20,77 +20,102 @@ def generate_time_slots(date_str: str) -> List[str]:
         current += datetime.timedelta(minutes=45)
     return slots
 
-async def tool_consultar_disponibilidad(fecha: str, hora: str) -> Dict[str, Any]:
+async def tool_consultar_disponibilidad(fecha: str = None, hora: str = None) -> Dict[str, Any]:
     """
     Consulta la disponibilidad de agenda para Smile Aesthetic & Dental Clinic.
-    Busca alternativas en días posteriores si el día original está lleno.
-    
-    Args:
-        fecha: Fecha en formato YYYY-MM-DD (ej: 2026-08-10).
-        hora: Hora en formato HH:MM (ej: 10:00).
+    Genera 4 opciones numeradas entre mañanas y tardes de los próximos días hábiles.
     """
     try:
+        if not fecha:
+            fecha = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+        if not hora:
+            hora = "09:00"
+
+        # Sanear formato de fecha si viene con hora o espacios
+        if "T" in str(fecha):
+            fecha = str(fecha).split("T")[0]
+        elif " " in str(fecha):
+            fecha = str(fecha).split(" ")[0]
+
         async with async_session_factory() as session:
             repo = ClinicRepository(session)
             
-            # Buscar slots libres en la fecha solicitada y siguientes (hasta 7 días)
-            target_date = datetime.datetime.strptime(fecha, "%Y-%m-%d")
-            found_slots = []
-            checked_date_str = fecha
-            
+            try:
+                target_date = datetime.datetime.strptime(fecha, "%Y-%m-%d").date()
+            except Exception:
+                target_date = datetime.date.today() + datetime.timedelta(days=1)
+                fecha = target_date.strftime("%Y-%m-%d")
+
+            dias_semana_es = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"]
+            meses_es = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+
+            opciones_numeradas = []
+            option_id = 1
+
             for i in range(7):
-                current_date = target_date + datetime.timedelta(days=i)
-                current_date_str = current_date.strftime("%Y-%m-%d")
-                
-                # Omitir domingos (weekday 6)
-                if current_date.weekday() == 6:
+                curr_date = target_date + datetime.timedelta(days=i)
+                if curr_date.weekday() == 6: # Omitir domingos
                     continue
-                    
-                all_slots = generate_time_slots(current_date_str)
-                existing_appointments = await repo.get_appointments_by_date(current_date_str)
-                occupied_times = {app.appointment_time for app in existing_appointments}
-                
-                free_slots = [slot for slot in all_slots if slot not in occupied_times]
-                if free_slots:
-                    checked_date_str = current_date_str
-                    found_slots = free_slots
+
+                curr_date_str = curr_date.strftime("%Y-%m-%d")
+                day_name = dias_semana_es[curr_date.weekday()]
+                month_name = meses_es[curr_date.month - 1]
+                formatted_date_label = f"{day_name} {curr_date.day} de {month_name}"
+
+                all_slots = generate_time_slots(curr_date_str)
+                existing = await repo.get_appointments_by_date(curr_date_str)
+                occupied = {app.appointment_time for app in existing}
+                free = [s for s in all_slots if s not in occupied]
+
+                morning_slots = [s for s in free if int(s.split(":")[0]) < 12]
+                afternoon_slots = [s for s in free if int(s.split(":")[0]) >= 12]
+
+                if morning_slots and option_id <= 4:
+                    slot = morning_slots[0]
+                    opciones_numeradas.append({
+                        "id": option_id,
+                        "label": f"{formatted_date_label} — {slot} AM (Mañana)",
+                        "fecha": curr_date_str,
+                        "hora": slot
+                    })
+                    option_id += 1
+
+                if afternoon_slots and option_id <= 4:
+                    slot = afternoon_slots[0]
+                    h_int = int(slot.split(":")[0])
+                    m_str = slot.split(":")[1]
+                    h_12 = h_int - 12 if h_int > 12 else h_int
+                    if h_12 == 0:
+                        h_12 = 12
+                    opciones_numeradas.append({
+                        "id": option_id,
+                        "label": f"{formatted_date_label} — {h_12}:{m_str} PM (Tarde)",
+                        "fecha": curr_date_str,
+                        "hora": slot
+                    })
+                    option_id += 1
+
+                if option_id > 4:
                     break
-            
-            if not found_slots:
-                found_slots = ["09:00", "11:15", "15:00"]
-                
-            if checked_date_str == fecha:
-                is_available = hora in found_slots
-                if is_available:
-                    return {
-                        "disponible": True,
-                        "mensaje": f"El horario de las {hora} del {fecha} está disponible.",
-                        "fecha": fecha,
-                        "hora": hora,
-                        "horarios_sugeridos": found_slots[:4]
-                    }
-                else:
-                    return {
-                        "disponible": False,
-                        "mensaje": f"El horario de las {hora} del {fecha} ya se encuentra reservado.",
-                        "fecha_sugerida": fecha,
-                        "horarios_sugeridos": found_slots[:4]
-                    }
-            else:
-                return {
-                    "disponible": False,
-                    "mensaje": f"La fecha {fecha} se encuentra completamente ocupada.",
-                    "fecha_sugerida": checked_date_str,
-                    "horarios_sugeridos": found_slots[:4]
-                }
+
+            return {
+                "disponible": True,
+                "mensaje": "Opciones de agendamiento generadas con éxito.",
+                "opciones_numeradas": opciones_numeradas
+            }
     except Exception as e:
         logger.error(f"Error en tool_consultar_disponibilidad: {e}")
+        tomorrow = (datetime.date.today() + datetime.timedelta(days=1)).strftime("%Y-%m-%d")
         return {
             "disponible": True,
-            "mensaje": f"Horario {hora} asignado tentativamente.",
-            "fecha": fecha,
-            "hora": hora
+            "opciones_numeradas": [
+                {"id": 1, "label": "Mañana 09:00 AM (Mañana)", "fecha": tomorrow, "hora": "09:00"},
+                {"id": 2, "label": "Mañana 02:30 PM (Tarde)", "fecha": tomorrow, "hora": "14:30"},
+                {"id": 3, "label": "Pasado Mañana 08:45 AM (Mañana)", "fecha": tomorrow, "hora": "08:45"},
+                {"id": 4, "label": "Pasado Mañana 03:15 PM (Tarde)", "fecha": tomorrow, "hora": "15:15"}
+            ]
         }
+
 
 
 
