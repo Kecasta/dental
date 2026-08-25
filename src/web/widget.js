@@ -65,14 +65,14 @@ async function sendMessage() {
             const data = await response.json();
             appendMessage(data.response_text, "agent");
         } else {
-            appendMessage("¡Hola! Tu mensaje ha sido recibido. Sofía te atenderá en un instante. 😊", "agent");
+            // Error real del backend (500/502/504, etc.). No inventamos una respuesta
+            // que aparente ser de Sofía: mostramos un aviso honesto de fallo temporal.
+            appendMessage("⚠️ No pudimos procesar tu mensaje en este momento. Por favor intenta de nuevo en unos segundos.", "agent");
         }
     } catch (error) {
         removeTypingIndicator();
-        // Simulación local si el servidor aún no está respondiendo
-        setTimeout(() => {
-            appendMessage("✨ Sofía (Smile Clinic): Gracias por escribirnos. He recibido tu solicitud y he verificado disponibilidad para tu valoración.", "agent");
-        }, 800);
+        // Fallo de red/conexión al backend (no hay respuesta del servidor).
+        appendMessage("⚠️ No hay conexión con el servidor en este momento. Por favor intenta de nuevo en unos segundos.", "agent");
     }
 }
 

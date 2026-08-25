@@ -14,8 +14,8 @@ class Settings(BaseSettings):
 
     # Gemini Model
     GEMINI_API_KEY: str = ""
-    GEMINI_MODEL: str = "gemini-2.5-flash-lite"
-    GEMINI_FALLBACK_MODEL: str = "gemini-2.0-flash-lite"
+    GEMINI_MODEL: str = "gemini-3.5-flash-lite"
+    GEMINI_FALLBACK_MODEL: str = "gemini-3.1-flash-lite"
 
 
 
