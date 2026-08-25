@@ -174,16 +174,16 @@ class GeminiClinicAgent:
                             raise Exception(f"Status {res.status_code}: {res.text}")
                 except Exception as e1:
                     if attempt == 2:
-                        logger.warning(f"Intento 1 (x-goog-api-key) falló tras 3 reintentos con: {e1}")
+                        logger.warning(f"Intento 1 ({model_name}) falló con: {e1}")
                         last_err = e1
                         res = None
                     else:
                         await asyncio.sleep(1.0)
 
-            # Método 1.5: Fallback a modelo gemini-2.0-flash si hay sobrecarga 503 en el principal
-            if res is None and last_err and "503" in str(last_err):
+            # Método 1.5: Fallback a modelo gemini-2.0-flash si el principal da cualquier error (404/503/400)
+            if res is None:
                 fallback_model = "gemini-2.0-flash" if model_name != "gemini-2.0-flash" else "gemini-1.5-flash"
-                logger.info(f"Cambiando a modelo de respaldo ultra-rápido {fallback_model} por alta demanda de Google...")
+                logger.info(f"Cambiando a modelo de respaldo {fallback_model}...")
                 try:
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/{fallback_model}:generateContent"
                     headers = {"x-goog-api-key": self.api_key, "Content-Type": "application/json"}
