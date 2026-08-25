@@ -58,7 +58,8 @@ class GeminiClinicAgent:
         """Ejecuta inferencia directa por REST API en Gemini para evitar problemas de firmas de google-auth."""
         import httpx
 
-        model_name = "gemini-2.5-flash"
+        model_name = "gemini-1.5-flash"
+
 
 
 
@@ -178,7 +179,8 @@ class GeminiClinicAgent:
 
             # Método 1.5: Fallback a modelo gemini-2.0-flash si el principal da cualquier error (404/503/400)
             if res is None:
-                fallback_model = "gemini-2.5-flash-lite" if model_name != "gemini-2.5-flash-lite" else "gemini-1.5-flash"
+                fallback_model = "gemini-1.5-flash"
+
 
                 logger.info(f"Cambiando a modelo de respaldo {fallback_model}...")
                 try:
