@@ -36,6 +36,40 @@ class GeminiClinicAgent:
                 logger.warning(f"No se pudo inicializar el cliente Gemini: {e}")
 
 
+    # Respuestas locales sin IA para mensajes triviales de bajo valor conversacional.
+    # Objetivo: ahorrar cupo gratuito de Gemini en saludos/agradecimientos que no
+    # requieren razonamiento ni calificación de lead. Deliberadamente pequeño y
+    # explícito: cualquier mensaje con más contenido pasa siempre por Gemini.
+    _SALUDOS = {"hola", "buenas", "buenos dias", "buenos días", "buenas tardes", "buenas noches", "hey", "hi", "hello"}
+    _AGRADECIMIENTOS = {"gracias", "muchas gracias", "vale gracias", "ok gracias", "thank you", "thanks"}
+    _DESPEDIDAS = {"chao", "adios", "adiós", "hasta luego", "nos vemos", "bye"}
+
+    def _respuesta_local(self, user_message: str) -> Optional[Dict[str, Any]]:
+        """Intenta responder sin llamar a Gemini si el mensaje es un saludo/agradecimiento/despedida simple."""
+        texto = user_message.strip().lower().strip("¡!¿?. ")
+        if texto in self._SALUDOS:
+            return {
+                "response_text": "¡Hola! Bienvenido/a a **Smile Aesthetic & Dental Clinic**. Soy Sofía, tu asesora virtual. ¿Qué tratamiento deseas consultar o agendar hoy?",
+                "intent": "saludo",
+                "used_model": "local",
+                "tools_called": []
+            }
+        if texto in self._AGRADECIMIENTOS:
+            return {
+                "response_text": "¡Con gusto! Estoy aquí para ayudarte. ¿Deseas consultar algo más o agendar tu cita?",
+                "intent": "agradecimiento",
+                "used_model": "local",
+                "tools_called": []
+            }
+        if texto in self._DESPEDIDAS:
+            return {
+                "response_text": "¡Hasta pronto! Cuando quieras agendar tu cita en Smile Aesthetic & Dental Clinic, aquí estaré. 😊",
+                "intent": "despedida",
+                "used_model": "local",
+                "tools_called": []
+            }
+        return None
+
     async def process_message(
         self,
         phone_number: str,
@@ -46,6 +80,12 @@ class GeminiClinicAgent:
         Procesa el mensaje del usuario utilizando únicamente Gemini REST API.
         """
         history = history or []
+
+        # Atajo local para mensajes triviales (ahorra cupo gratuito de la API).
+        respuesta_local = self._respuesta_local(user_message)
+        if respuesta_local is not None:
+            return respuesta_local
+
         return await self._call_gemini(user_message, history, phone_number)
 
 
@@ -58,11 +98,11 @@ class GeminiClinicAgent:
         """Ejecuta inferencia directa por REST API en Gemini para evitar problemas de firmas de google-auth."""
         import httpx
 
-        model_name = "gemini-1.5-flash"
-
-
-
-
+        # El modelo (primario y de respaldo) se lee ÚNICAMENTE desde .env — nunca
+        # hardcodeado en el código. Ver GEMINI_MODEL / GEMINI_FALLBACK_MODEL en
+        # config/settings.py. Deben ser modelos DISTINTOS para que el fallback
+        # tenga un cupo de cuota independiente (si no, reintenta el mismo límite).
+        model_name = settings.GEMINI_MODEL
         # Preparar los mensajes del historial en formato REST de Gemini
         contents_payload = []
         for h in history[-10:]:
@@ -153,7 +193,11 @@ class GeminiClinicAgent:
             data = None
             last_err = None
 
-            # Método 1: Cabecera x-goog-api-key con reintento automático para 503 / 429
+            # Método 1: Cabecera x-goog-api-key.
+            # 429 = cuota diaria/por-minuto agotada -> reintentar el mismo modelo no sirve,
+            #       saltar de inmediato al modelo de respaldo (cupo independiente).
+            # 503 = sobrecarga momentánea del servidor -> sí vale la pena un backoff corto.
+            primary_quota_exhausted = False
             for attempt in range(3):
                 try:
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
@@ -163,8 +207,14 @@ class GeminiClinicAgent:
                         if res.status_code == 200:
                             data = res.json()
                             break
-                        elif res.status_code in (503, 429) and attempt < 2:
-                            logger.warning(f"Servidor de Google ocupado (Status {res.status_code}). Reintentando en 1.5s (intento {attempt+1}/3)...")
+                        elif res.status_code == 429:
+                            logger.warning(f"Cuota agotada para '{model_name}' (429). Se omiten reintentos y se pasa al modelo de respaldo.")
+                            primary_quota_exhausted = True
+                            last_err = Exception(f"Status 429: {res.text}")
+                            res = None
+                            break
+                        elif res.status_code == 503 and attempt < 2:
+                            logger.warning(f"Servidor de Google ocupado (Status 503). Reintentando en 1.5s (intento {attempt+1}/3)...")
                             await asyncio.sleep(1.5)
                             continue
                         else:
@@ -177,10 +227,11 @@ class GeminiClinicAgent:
                     else:
                         await asyncio.sleep(1.0)
 
-            # Método 1.5: Fallback a modelo gemini-2.0-flash si el principal da cualquier error (404/503/400)
+            # Método 1.5: Fallback al modelo configurado en GEMINI_FALLBACK_MODEL (.env) —
+            # debe ser un modelo DISTINTO al primario para tener cupo de cuota independiente.
+            fallback_quota_exhausted = False
             if res is None:
-                fallback_model = "gemini-1.5-flash"
-
+                fallback_model = settings.GEMINI_FALLBACK_MODEL
 
                 logger.info(f"Cambiando a modelo de respaldo {fallback_model}...")
                 try:
@@ -190,12 +241,28 @@ class GeminiClinicAgent:
                         res = await http_client.post(url, json=payload, headers=headers)
                         if res.status_code == 200:
                             data = res.json()
+                            model_name = fallback_model
+                        elif res.status_code == 429:
+                            fallback_quota_exhausted = True
+                            raise Exception(f"Status 429: {res.text}")
                         else:
                             raise Exception(f"Status {res.status_code}: {res.text}")
                 except Exception as e_fb:
                     logger.warning(f"Modelo de respaldo {fallback_model} falló con: {e_fb}")
                     last_err = e_fb
                     res = None
+
+            # Si tanto el modelo primario como el de respaldo agotaron su cuota gratuita,
+            # no tiene sentido seguir intentando otros esquemas de autenticación (el problema
+            # no es la autenticación). Responder algo humano en vez de propagar un error crudo.
+            if primary_quota_exhausted and fallback_quota_exhausted:
+                logger.error("Cuota gratuita agotada en modelo primario y de respaldo. Respondiendo mensaje de disponibilidad limitada.")
+                return {
+                    "response_text": "En este momento Sofía está muy solicitada y alcanzó su límite de consultas gratuitas por hoy. Un asesor de la clínica te contactará en breve, o puedes intentar nuevamente en unos minutos. ¡Gracias por tu paciencia! 🦷",
+                    "intent": "cupo_agotado",
+                    "used_model": "ninguno",
+                    "tools_called": tools_called
+                }
 
             # Método 2: Cabecera Authorization Bearer (Para tokens de tipo OAuth2/Stitch)
 
