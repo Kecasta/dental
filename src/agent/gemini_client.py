@@ -58,11 +58,8 @@ class GeminiClinicAgent:
         """Ejecuta inferencia directa por REST API en Gemini para evitar problemas de firmas de google-auth."""
         import httpx
 
-        raw_model = (settings.GEMINI_MODEL or 'gemini-2.0-flash').strip().lower().replace(" ", "-")
-        if "lite" in raw_model:
-            model_name = "gemini-2.0-flash-lite"
-        else:
-            model_name = "gemini-2.0-flash"
+        model_name = "gemini-2.0-flash"
+
 
         # Preparar los mensajes del historial en formato REST de Gemini
         contents_payload = []
